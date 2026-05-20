@@ -1,50 +1,96 @@
-# Welcome to your Expo app 👋
+# SK-POS Care — Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Internal Android app for SK-POS Care staff — the mobile companion to the
+ArcksCare web app. It is **not** customer-facing: customers still raise tickets
+on the web. This app is for the team that works those tickets.
 
-## Get started
+Built with Expo Router (SDK 54) + React Native + TypeScript.
 
-1. Install dependencies
+## Roles
 
-   ```bash
-   npm install
-   ```
+The app mirrors the three staff roles from the backend:
 
-2. Start the app
+| Role | In app | Can do |
+| --- | --- | --- |
+| `OWNER` | Owner | Everything — plus Analytics, staff accounts, and the sub-engineer roster |
+| `MANAGER` | Admin | Triage, assign, manage installations, charges, warranty |
+| `ENGINEER` | Engineer | Their assigned tickets/installations — accept, work notes, resolve, sign-off |
 
-   ```bash
-   npx expo start
-   ```
+Tabs adapt to the role: **Analytics** and the **Workspace** settings only appear for Owners.
 
-In the output, you'll find options to open the app in a
+## Passcode login
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Because the FastAPI backend only knows username/password, passcode login is a
+client-side convenience layer:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. Sign in once with your staff username + password.
+2. Set a 4-digit passcode (and optionally enable fingerprint/face unlock).
+3. On later launches, the passcode (or biometric) unlocks credentials cached in
+   the Android Keystore (`expo-secure-store`) and the app re-authenticates
+   silently.
 
-## Get a fresh project
+The app auto-locks after being backgrounded for 90s. "Sign out" wipes the
+account from the device. One account per device — switching users means signing
+out and back in.
 
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+npm install
+npx expo start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then press `a` to open the Android emulator, or scan the QR code with
+[Expo Go](https://expo.dev/go) on a physical phone.
 
-## Learn more
+### Pointing the app at the backend
 
-To learn more about developing your project with Expo, look at the following resources:
+The backend URL is **editable in the app** — tap *Backend server* on the login
+screen. No rebuild is needed to change it.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+| Running the app on… | Use this server URL |
+| --- | --- |
+| Android emulator | `http://10.0.2.2:8000` (the default; `10.0.2.2` is the emulator's alias for your computer's `localhost`) |
+| A physical phone (same Wi-Fi) | `http://<your-computer-LAN-IP>:8000`, e.g. `http://192.168.1.5:8000` |
+| Production | the deployed API URL |
 
-## Join the community
+Start the backend first (`uvicorn app.main:app --reload --port 8000` in
+`ArcksCare/backend`). CORS does not apply to native apps, so no backend change
+is needed.
 
-Join our community of developers creating universal apps.
+## Project layout
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+app/
+  _layout.tsx            Root — AuthProvider + status-driven routing
+  index.tsx              Startup splash
+  login.tsx              Username/password sign-in + server URL
+  lock.tsx               Passcode / biometric unlock
+  set-passcode.tsx       Create or change the passcode
+  (tabs)/
+    _layout.tsx          Bottom tabs (role-aware)
+    tickets/             List + detail (full workflow)
+    installations/       List + create + detail
+    analytics/           Owner dashboard
+    more/                Account, security, staff accounts, roster
+components/              Shared UI (ui kit, Screen, States, SignaturePad, …)
+lib/
+  api.ts                 Typed API client
+  auth.tsx               Auth provider — session, passcode, biometrics
+  storage.ts             SecureStore + AsyncStorage
+  types.ts               API data shapes
+  theme.ts               Design tokens
+  hooks.ts, format.ts, options.ts, images.ts, signature.ts
+```
+
+## Building an APK
+
+For a shareable internal build, use [EAS Build](https://docs.expo.dev/build/setup/):
+
+```bash
+npm install -g eas-cli
+eas build --platform android --profile preview
+```
+
+(Passcode unlock and biometrics need a real build or development build — they
+are not available in the web preview.)

@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "sk-pos-care",
+    "name": "SK-POS Care",
     "slug": "sk-pos-care",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "skposcare",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -37,6 +37,20 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SK-POS Care needs photo access so engineers can attach worksite images to tickets.",
+          "cameraPermission": "SK-POS Care needs camera access so engineers can photograph work in the field."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use biometrics to unlock SK-POS Care."
         }
       ]
     ],
