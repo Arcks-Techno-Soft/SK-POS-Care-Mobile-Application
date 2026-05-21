@@ -19,6 +19,7 @@ import { ApiError } from '@/lib/api';
 import { useApi } from '@/lib/auth';
 import { formatINR } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
+import { ticketIsOperable, ticketLockReason } from '@/lib/options';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type { RosterContact, SubEngineer, TicketDetail } from '@/lib/types';
 
@@ -45,7 +46,7 @@ export default function TicketSubEngineers({ reference, ticket }: Props) {
   const [feeFor, setFeeFor] = useState<SubEngineer | null>(null);
 
   const subs = subsQuery.data ?? [];
-  const canAdd = ticket.status !== 'OPEN';
+  const operable = ticketIsOperable(ticket.status);
 
   return (
     <Section
@@ -74,7 +75,8 @@ export default function TicketSubEngineers({ reference, ticket }: Props) {
                   tone={sub.fee_inr != null ? 'info' : 'neutral'}
                 />
               </View>
-              <View style={styles.rowActions}>
+              {operable && (
+                <View style={styles.rowActions}>
                 <Button
                   title="Edit fee"
                   variant="secondary"
@@ -111,23 +113,22 @@ export default function TicketSubEngineers({ reference, ticket }: Props) {
                   }
                   style={{ flex: 1 }}
                 />
-              </View>
+                </View>
+              )}
             </View>
           ))
         )}
 
         <Divider style={{ marginVertical: spacing.sm }} />
-        <Button
-          title="Add sub-engineer"
-          icon="add"
-          variant="secondary"
-          disabled={!canAdd}
-          onPress={() => setAddOpen(true)}
-        />
-        {!canAdd && (
-          <Text style={styles.hint}>
-            Acknowledge the ticket before adding sub-engineers.
-          </Text>
+        {operable ? (
+          <Button
+            title="Add sub-engineer"
+            icon="add"
+            variant="secondary"
+            onPress={() => setAddOpen(true)}
+          />
+        ) : (
+          <Text style={styles.hint}>{ticketLockReason(ticket.status)}</Text>
         )}
       </View>
 

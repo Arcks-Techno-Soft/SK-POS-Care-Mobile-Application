@@ -126,3 +126,18 @@ export function prettyEnum(value: string): string {
     .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
     .join(' ');
 }
+
+/**
+ * Whether work operations (notes, sub-engineers, spares, shipments) may be
+ * performed on a ticket. Allowed only between the engineer accepting the
+ * ticket and the ticket being closed — i.e. ACCEPTED, RESOLVING, RESOLVED.
+ */
+export function ticketIsOperable(status: TicketStatus): boolean {
+  return status === 'ACCEPTED' || status === 'RESOLVING' || status === 'RESOLVED';
+}
+
+/** Short explanation of why a ticket's operations are locked. */
+export function ticketLockReason(status: TicketStatus): string {
+  if (status === 'CLOSED') return 'This ticket is closed — no further changes.';
+  return 'Available once the assigned engineer accepts the ticket.';
+}

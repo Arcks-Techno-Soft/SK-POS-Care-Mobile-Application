@@ -20,6 +20,7 @@ import { ApiError } from '@/lib/api';
 import { useApi } from '@/lib/auth';
 import { formatINR } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
+import { ticketIsOperable, ticketLockReason } from '@/lib/options';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type {
   ChargeLineItem,
@@ -52,6 +53,7 @@ export default function TicketCharges({ reference, ticket }: Props) {
   const [editLine, setEditLine] = useState<ChargeLineItem | null>(null);
 
   const charges = chargesQuery.data;
+  const operable = ticketIsOperable(ticket.status);
 
   return (
     <Section title="Spares & charges">
@@ -76,13 +78,15 @@ export default function TicketCharges({ reference, ticket }: Props) {
               <Text style={styles.lineTotal}>
                 {formatINR(charges.service_fee_inr)}
               </Text>
-              <Pressable
-                onPress={() => setFeeOpen(true)}
-                hitSlop={8}
-                style={styles.iconBtn}
-              >
-                <Ionicons name="create-outline" size={18} color={colors.inkMuted} />
-              </Pressable>
+              {operable && (
+                <Pressable
+                  onPress={() => setFeeOpen(true)}
+                  hitSlop={8}
+                  style={styles.iconBtn}
+                >
+                  <Ionicons name="create-outline" size={18} color={colors.inkMuted} />
+                </Pressable>
+              )}
             </View>
 
             <Divider style={{ marginVertical: spacing.sm }} />
@@ -96,6 +100,7 @@ export default function TicketCharges({ reference, ticket }: Props) {
                   {i > 0 && <Divider style={{ marginVertical: spacing.sm }} />}
                   <ChargeRow
                     item={item}
+                    editable={operable}
                     onEdit={() => setEditLine(item)}
                     onRemove={() =>
                       Alert.alert(
@@ -150,12 +155,16 @@ export default function TicketCharges({ reference, ticket }: Props) {
             )}
 
             <View style={{ marginTop: spacing.md }}>
-              <Button
-                title="Add spare"
-                icon="add"
-                variant="secondary"
-                onPress={() => setAddOpen(true)}
-              />
+              {operable ? (
+                <Button
+                  title="Add spare"
+                  icon="add"
+                  variant="secondary"
+                  onPress={() => setAddOpen(true)}
+                />
+              ) : (
+                <Text style={styles.hint}>{ticketLockReason(ticket.status)}</Text>
+              )}
             </View>
           </>
         ) : null}
@@ -222,10 +231,12 @@ export default function TicketCharges({ reference, ticket }: Props) {
 
 function ChargeRow({
   item,
+  editable,
   onEdit,
   onRemove,
 }: {
   item: ChargeLineItem;
+  editable: boolean;
   onEdit: () => void;
   onRemove: () => void;
 }) {
@@ -246,20 +257,24 @@ function ChargeRow({
           tone={item.billable ? 'success' : 'neutral'}
         />
         <View style={{ flex: 1 }} />
-        <Button
-          title="Edit"
-          variant="secondary"
-          size="sm"
-          fullWidth={false}
-          onPress={onEdit}
-        />
-        <Button
-          title="Remove"
-          variant="danger"
-          size="sm"
-          fullWidth={false}
-          onPress={onRemove}
-        />
+        {editable && (
+          <>
+            <Button
+              title="Edit"
+              variant="secondary"
+              size="sm"
+              fullWidth={false}
+              onPress={onEdit}
+            />
+            <Button
+              title="Remove"
+              variant="danger"
+              size="sm"
+              fullWidth={false}
+              onPress={onRemove}
+            />
+          </>
+        )}
       </View>
     </View>
   );

@@ -19,6 +19,7 @@ import { ApiError } from '@/lib/api';
 import { useApi } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
+import { ticketIsOperable, ticketLockReason } from '@/lib/options';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type { Shipment, TicketDetail } from '@/lib/types';
 
@@ -40,7 +41,7 @@ function errMsg(e: unknown): string {
     : (e as Error)?.message ?? 'Something went wrong.';
 }
 
-export default function TicketShipments({ reference }: Props) {
+export default function TicketShipments({ reference, ticket }: Props) {
   const api = useApi();
   const shipmentsQuery = useQuery<Shipment[]>(
     () => api.listShipments(reference),
@@ -51,6 +52,7 @@ export default function TicketShipments({ reference }: Props) {
   const [deliveringId, setDeliveringId] = useState<number | null>(null);
 
   const shipments = shipmentsQuery.data ?? [];
+  const operable = ticketIsOperable(ticket.status);
 
   const markDelivered = async (shipmentId: number) => {
     setDeliveringId(shipmentId);
@@ -110,7 +112,7 @@ export default function TicketShipments({ reference }: Props) {
                   ))}
                 </View>
               )}
-              {!s.delivered_at && (
+              {!s.delivered_at && operable && (
                 <View style={{ marginTop: spacing.sm }}>
                   <Button
                     title="Mark delivered"
@@ -127,12 +129,16 @@ export default function TicketShipments({ reference }: Props) {
         )}
 
         <Divider style={{ marginVertical: spacing.sm }} />
-        <Button
-          title="Add shipment"
-          icon="add"
-          variant="secondary"
-          onPress={() => setAddOpen(true)}
-        />
+        {operable ? (
+          <Button
+            title="Add shipment"
+            icon="add"
+            variant="secondary"
+            onPress={() => setAddOpen(true)}
+          />
+        ) : (
+          <Text style={styles.empty}>{ticketLockReason(ticket.status)}</Text>
+        )}
       </View>
 
       <AddShipmentModal

@@ -11,7 +11,7 @@ import { ApiError } from '@/lib/api';
 import { useApi } from '@/lib/auth';
 import { timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
-import { roleLabel } from '@/lib/options';
+import { roleLabel, ticketIsOperable, ticketLockReason } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
 import type { PickedImage, TicketDetail, WorkNote } from '@/lib/types';
 
@@ -27,7 +27,7 @@ function errMsg(e: unknown): string {
     : (e as Error)?.message ?? 'Something went wrong.';
 }
 
-export default function TicketNotes({ reference }: Props) {
+export default function TicketNotes({ reference, ticket }: Props) {
   const api = useApi();
   const notesQuery = useQuery<WorkNote[]>(
     () => api.ticketNotes(reference),
@@ -59,6 +59,7 @@ export default function TicketNotes({ reference }: Props) {
   };
 
   const notes = notesQuery.data ?? [];
+  const operable = ticketIsOperable(ticket.status);
 
   return (
     <Section title="Work notes" subtitle={notes.length ? `${notes.length} note${notes.length === 1 ? '' : 's'}` : undefined}>
@@ -98,26 +99,30 @@ export default function TicketNotes({ reference }: Props) {
         <Divider style={{ marginVertical: spacing.sm }} />
 
         {/* Composer */}
-        <View style={styles.composer}>
-          {error && <Banner message={error} />}
-          <Field
-            label="Add a note"
-            value={body}
-            onChangeText={(t) => {
-              setBody(t);
-              if (error) setError(null);
-            }}
-            placeholder="Describe progress, findings, next steps…"
-            multiline
-          />
-          <PhotoPicker images={images} onChange={setImages} disabled={submitting} />
-          <Button
-            title="Add note"
-            icon="send-outline"
-            loading={submitting}
-            onPress={submit}
-          />
-        </View>
+        {operable ? (
+          <View style={styles.composer}>
+            {error && <Banner message={error} />}
+            <Field
+              label="Add a note"
+              value={body}
+              onChangeText={(t) => {
+                setBody(t);
+                if (error) setError(null);
+              }}
+              placeholder="Describe progress, findings, next steps…"
+              multiline
+            />
+            <PhotoPicker images={images} onChange={setImages} disabled={submitting} />
+            <Button
+              title="Add note"
+              icon="send-outline"
+              loading={submitting}
+              onPress={submit}
+            />
+          </View>
+        ) : (
+          <Text style={styles.empty}>{ticketLockReason(ticket.status)}</Text>
+        )}
       </View>
     </Section>
   );
