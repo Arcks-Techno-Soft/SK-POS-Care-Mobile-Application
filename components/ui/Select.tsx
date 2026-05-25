@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, { SlideInDown } from 'react-native-reanimated';
 
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 
@@ -65,9 +66,10 @@ export function Select({
         <Ionicons name="chevron-down" size={18} color={colors.inkSubtle} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <Animated.View entering={SlideInDown.duration(240)}>
+            <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{sheetTitle ?? label ?? 'Select'}</Text>
               <Pressable onPress={() => setOpen(false)} hitSlop={10}>
@@ -104,6 +106,7 @@ export function Select({
               }}
             />
           </Pressable>
+          </Animated.View>
         </Pressable>
       </Modal>
     </View>
