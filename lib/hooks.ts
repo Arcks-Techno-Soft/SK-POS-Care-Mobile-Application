@@ -9,6 +9,8 @@ export interface QueryState<T> {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
+  /** HTTP status code when the failure was an ApiError. Null otherwise. */
+  errorStatus: number | null;
   refresh: () => void;
   reload: () => void;
   setData: React.Dispatch<React.SetStateAction<T | null>>;
@@ -23,6 +25,7 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): Qu
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -37,13 +40,18 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): Qu
       if (mode === 'refresh') setRefreshing(true);
       else setLoading(true);
       setError(null);
+      setErrorStatus(null);
       try {
         const result = await fetcher();
         if (mounted.current) setData(result);
       } catch (e) {
         const msg =
           e instanceof ApiError ? e.message : (e as Error)?.message ?? 'Failed to load.';
-        if (mounted.current) setError(msg);
+        const code = e instanceof ApiError ? e.status : null;
+        if (mounted.current) {
+          setError(msg);
+          setErrorStatus(code);
+        }
       } finally {
         if (mounted.current) {
           setLoading(false);
@@ -64,6 +72,7 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[] = []): Qu
     loading,
     refreshing,
     error,
+    errorStatus,
     refresh: () => run('refresh'),
     reload: () => run('initial'),
     setData,

@@ -1,5 +1,5 @@
 /**
- * API data shapes — mirrors the SK-POS Care FastAPI backend (app/schemas).
+ * API data shapes — mirrors the SK-POS Support FastAPI backend (app/schemas).
  * Field names match the JSON the backend returns exactly.
  */
 

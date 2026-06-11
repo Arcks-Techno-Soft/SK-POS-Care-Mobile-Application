@@ -1,5 +1,5 @@
 /**
- * SK-POS Care API client.
+ * SK-POS Support API client.
  *
  * One `Api` instance is created by the auth provider. It reads the current
  * server URL and JWT lazily through getters so it never goes stale, and calls
@@ -185,6 +185,44 @@ export class Api {
   }
 
   /* ---------------- tickets ---------------- */
+
+  /**
+   * Create a ticket on behalf of a customer.
+   *
+   * Mirrors the public customer form: POST /tickets as multipart, with the
+   * ticket data JSON-encoded under `payload` and optional `files`.
+   * Returns 409 with a DuplicateInfo body if the serial number already has
+   * an open ticket inside the dedup window — surface it to the user instead
+   * of treating it as a hard error.
+   */
+  createTicket(
+    body: {
+      business_name: string;
+      contact_name: string;
+      phone: string;
+      email: string;
+      business_type: string;
+      address_line1: string;
+      address_line2?: string;
+      address_line3?: string;
+      city: string;
+      state: string;
+      pincode: string;
+      latitude?: number;
+      longitude?: number;
+      product_category: string;
+      serial_number: string;
+      issue_category: string;
+      description: string;
+      preferred_contact_time?: string;
+    },
+    images: PickedImage[],
+  ): Promise<TicketDetail> {
+    const form = new FormData();
+    form.append('payload', JSON.stringify(body));
+    this.appendImages(form, 'files', images);
+    return this.request('POST', '/tickets', { form });
+  }
 
   listTickets(params: {
     status?: string;

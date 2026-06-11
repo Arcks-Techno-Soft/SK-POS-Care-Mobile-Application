@@ -1,8 +1,11 @@
-/** SK-POS Care wordmark. */
+/** SK-POS Support wordmark. */
 
+import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, radius } from '@/lib/theme';
+
+const mark = require('@/assets/images/icon.png');
 
 export function Brand({
   size = 'lg',
@@ -15,11 +18,13 @@ export function Brand({
   const box = large ? 44 : 30;
   return (
     <View style={styles.row}>
-      <View style={[styles.mark, { width: box, height: box }]}>
-        <Text style={[styles.markText, { fontSize: large ? 17 : 12 }]}>SK</Text>
-      </View>
+      <Image
+        source={mark}
+        style={[styles.mark, { width: box, height: box }]}
+        contentFit="cover"
+      />
       <View>
-        <Text style={[styles.word, { fontSize: large ? 22 : 16 }]}>SK-POS Care</Text>
+        <Text style={[styles.word, { fontSize: large ? 22 : 16 }]}>SK-POS Support</Text>
         {tagline && <Text style={styles.tagline}>{tagline}</Text>}
       </View>
     </View>
@@ -28,13 +33,7 @@ export function Brand({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  mark: {
-    backgroundColor: colors.ink,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markText: { color: colors.onInk, fontWeight: '800', letterSpacing: 0.5 },
+  mark: { borderRadius: radius.md },
   word: { color: colors.ink, fontWeight: '700', letterSpacing: -0.4 },
   tagline: { color: colors.inkSubtle, fontSize: 12, marginTop: 1 },
 });

@@ -198,7 +198,7 @@ export default function MoreScreen() {
       <Button title="Sign out" variant="danger" onPress={handleSignOut} />
 
       {/* ---- Footer ---- */}
-      <Text style={styles.footer}>SK-POS Care v{version}</Text>
+      <Text style={styles.footer}>SK-POS Support v{version}</Text>
     </Screen>
   );
 }

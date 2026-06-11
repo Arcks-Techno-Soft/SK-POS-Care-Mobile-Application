@@ -85,7 +85,7 @@ export default function SetPasscodeScreen() {
           </View>
           <Text style={styles.title}>Enable biometric unlock?</Text>
           <Text style={styles.subtitle}>
-            Unlock SK-POS Care with your fingerprint or face. Your passcode still
+            Unlock SK-POS Support with your fingerprint or face. Your passcode still
             works as a backup.
           </Text>
           <View style={styles.bioActions}>

@@ -29,7 +29,10 @@ import { Api, ApiError, normalizeBaseUrl } from './api';
 import * as storage from './storage';
 import type { Role, User } from './types';
 
-const DEFAULT_SERVER_URL = 'http://10.0.2.2:8000';
+// Production backend on Render. End users don't configure this — it's the
+// app's permanent home. The override path in the More tab is kept so
+// staging/local backends can still be aimed at when debugging.
+const DEFAULT_SERVER_URL = 'https://arckscare-api.onrender.com';
 /** Re-lock if the app was backgrounded longer than this. */
 const LOCK_AFTER_MS = 90_000;
 
@@ -290,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const unlockWithBiometric = useCallback(async (): Promise<ActionResult> => {
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Unlock SK-POS Care',
+      promptMessage: 'Unlock SK-POS Support',
       cancelLabel: 'Use passcode',
     });
     if (!result.success) return { ok: false, error: 'Biometric check cancelled.' };

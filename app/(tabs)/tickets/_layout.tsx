@@ -6,6 +6,7 @@ export default function TicketsLayout() {
   return (
     <Stack screenOptions={stackScreenOptions}>
       <Stack.Screen name="index" options={{ title: 'Tickets' }} />
+      <Stack.Screen name="new" options={{ title: 'New ticket' }} />
       <Stack.Screen name="[reference]" options={{ title: 'Ticket' }} />
     </Stack>
   );

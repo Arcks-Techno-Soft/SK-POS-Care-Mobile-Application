@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -137,7 +138,22 @@ export default function TicketsListScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: isEngineer ? 'My work' : 'Tickets' }} />
+      <Stack.Screen
+        options={{
+          title: isEngineer ? 'My work' : 'Tickets',
+          headerRight: !isEngineer
+            ? () => (
+                <Pressable
+                  onPress={() => router.push('/(tabs)/tickets/new')}
+                  hitSlop={10}
+                  style={{ marginRight: 4 }}
+                >
+                  <Ionicons name="add" size={26} color={colors.ink} />
+                </Pressable>
+              )
+            : undefined,
+        }}
+      />
       <FlatList
         data={items}
         keyExtractor={(t) => String(t.id)}

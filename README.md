@@ -1,6 +1,6 @@
-# SK-POS Care — Mobile App
+# SK-POS Support — Mobile App
 
-Internal Android app for SK-POS Care staff — the mobile companion to the
+Internal Android app for SK-POS Support staff — the mobile companion to the
 ArcksCare web app. It is **not** customer-facing: customers still raise tickets
 on the web. This app is for the team that works those tickets.
 

@@ -1,5 +1,5 @@
 /**
- * SK-POS Care design tokens — mirrors the web app's premium light palette.
+ * SK-POS Support design tokens — mirrors the web app's premium light palette.
  * The app is light-mode only (locked via app.json userInterfaceStyle).
  */
 

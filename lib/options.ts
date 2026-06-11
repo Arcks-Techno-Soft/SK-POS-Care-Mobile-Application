@@ -66,6 +66,13 @@ export const ISSUE_CATEGORIES = [
   'Other',
 ];
 
+export const PREFERRED_CONTACT_TIMES = [
+  'Morning (9 AM - 12 PM)',
+  'Afternoon (12 PM - 4 PM)',
+  'Evening (4 PM - 8 PM)',
+  'Anytime',
+];
+
 export const INDIAN_STATES = [
   'Andhra Pradesh',
   'Arunachal Pradesh',

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
-import { Loading, ErrorView } from '@/components/States';
+import { EmptyState, Loading, ErrorView } from '@/components/States';
 import TicketCharges from '@/components/ticket/TicketCharges';
 import TicketEvents from '@/components/ticket/TicketEvents';
 import TicketNotes from '@/components/ticket/TicketNotes';
@@ -47,6 +47,7 @@ export default function TicketDetailScreen() {
     data: ticket,
     loading,
     error,
+    errorStatus,
     refreshing,
     refresh,
     reload,
@@ -60,6 +61,12 @@ export default function TicketDetailScreen() {
 
       {loading && !ticket ? (
         <Loading label="Loading ticket…" />
+      ) : !ticket && (errorStatus === 403 || errorStatus === 404) ? (
+        <EmptyState
+          icon="lock-closed-outline"
+          title="Access restricted"
+          subtitle={`Ticket ${reference} isn't assigned to you, so the details aren't visible from your account. Only the assigned engineer, managers, and owners can open it.`}
+        />
       ) : error && !ticket ? (
         <ErrorView message={error} onRetry={reload} />
       ) : ticket ? (
