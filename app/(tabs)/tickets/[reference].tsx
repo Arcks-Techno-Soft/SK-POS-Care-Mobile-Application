@@ -76,7 +76,6 @@ export default function TicketDetailScreen() {
           style={styles.root}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

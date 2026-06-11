@@ -65,7 +65,6 @@ export default function InstallationDetailScreen() {
           style={styles.root}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

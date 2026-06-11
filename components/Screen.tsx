@@ -40,7 +40,6 @@ export function Screen({
             contentStyle,
           ]}
           keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
           refreshControl={
             onRefresh ? (
               <RefreshControl
