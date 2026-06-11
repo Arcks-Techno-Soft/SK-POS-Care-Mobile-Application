@@ -9,6 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { KeyboardAvoider } from '@/components/KeyboardAvoider';
 import { colors, spacing } from '@/lib/theme';
 
 interface ScreenProps {
@@ -30,26 +31,29 @@ export function Screen({
 }: ScreenProps) {
   if (scroll) {
     return (
-      <ScrollView
-        style={styles.root}
-        contentContainerStyle={[
-          padded && styles.padded,
-          styles.scrollContent,
-          contentStyle,
-        ]}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          onRefresh ? (
-            <RefreshControl
-              refreshing={!!refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.inkMuted}
-            />
-          ) : undefined
-        }
-      >
-        {children}
-      </ScrollView>
+      <KeyboardAvoider style={styles.root}>
+        <ScrollView
+          style={styles.root}
+          contentContainerStyle={[
+            padded && styles.padded,
+            styles.scrollContent,
+            contentStyle,
+          ]}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          refreshControl={
+            onRefresh ? (
+              <RefreshControl
+                refreshing={!!refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.inkMuted}
+              />
+            ) : undefined
+          }
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoider>
     );
   }
   return (

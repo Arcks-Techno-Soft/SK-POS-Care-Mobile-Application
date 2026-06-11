@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
+import { KeyboardAvoider } from '@/components/KeyboardAvoider';
 import { EmptyState, Loading, ErrorView } from '@/components/States';
 import TicketCharges from '@/components/ticket/TicketCharges';
 import TicketEvents from '@/components/ticket/TicketEvents';
@@ -70,10 +71,12 @@ export default function TicketDetailScreen() {
       ) : error && !ticket ? (
         <ErrorView message={error} onRetry={reload} />
       ) : ticket ? (
+        <KeyboardAvoider style={styles.root}>
         <ScrollView
           style={styles.root}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -241,6 +244,7 @@ export default function TicketDetailScreen() {
           )}
           <TicketEvents reference={reference} ticket={ticket} reload={reload} />
         </ScrollView>
+        </KeyboardAvoider>
       ) : null}
     </View>
   );

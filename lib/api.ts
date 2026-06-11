@@ -200,7 +200,7 @@ export class Api {
       business_name: string;
       contact_name: string;
       phone: string;
-      email: string;
+      email?: string;
       business_type: string;
       address_line1: string;
       address_line2?: string;

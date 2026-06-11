@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 
 import { Screen } from '@/components/Screen';
-import { Avatar, Banner, Button, Divider, Field } from '@/components/ui/kit';
+import { Avatar, Banner, Button, Divider } from '@/components/ui/kit';
 import { Section } from '@/components/ui/Section';
 import { useAuth } from '@/lib/auth';
 import { roleLabel } from '@/lib/options';
@@ -57,11 +57,9 @@ function Row({
 /* ---------- main screen ---------- */
 
 export default function MoreScreen() {
-  const { user, serverUrl, setServerUrl, biometricAvailable, biometricEnabled, enableBiometric, disableBiometric, lock, signOut } = useAuth();
+  const { user, biometricAvailable, biometricEnabled, enableBiometric, disableBiometric, lock, signOut } = useAuth();
   const router = useRouter();
 
-  const [serverInput, setServerInput] = useState(serverUrl);
-  const [serverSaving, setServerSaving] = useState(false);
   const [bioError, setBioError] = useState<string | null>(null);
 
   const version = Constants.expoConfig?.version ?? '—';
@@ -77,16 +75,6 @@ export default function MoreScreen() {
     }
   }
 
-  /* ---- server URL save ---- */
-  async function handleSaveServer() {
-    setServerSaving(true);
-    try {
-      await setServerUrl(serverInput.trim());
-      Alert.alert('Saved', 'Server URL updated.');
-    } finally {
-      setServerSaving(false);
-    }
-  }
 
   /* ---- sign out ---- */
   function handleSignOut() {
@@ -152,29 +140,6 @@ export default function MoreScreen() {
         />
       </Section>
 
-      {/* ---- Server URL ---- */}
-      <Section title="Server">
-        <Text style={styles.serverCurrent} numberOfLines={1}>{serverUrl}</Text>
-        <Field
-          label="Server URL"
-          value={serverInput}
-          onChangeText={setServerInput}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          placeholder="http://10.0.2.2:8000"
-        />
-        <Button
-          title="Save"
-          variant="secondary"
-          size="sm"
-          fullWidth={false}
-          loading={serverSaving}
-          onPress={handleSaveServer}
-          style={{ alignSelf: 'flex-start', marginTop: spacing.xs }}
-        />
-      </Section>
-
       {/* ---- Workspace (owner-only) ---- */}
       {user?.role === 'OWNER' && (
         <Section title="Workspace" flush>
@@ -198,7 +163,7 @@ export default function MoreScreen() {
       <Button title="Sign out" variant="danger" onPress={handleSignOut} />
 
       {/* ---- Footer ---- */}
-      <Text style={styles.footer}>SK-POS Support v{version}</Text>
+      <Text style={styles.footer}>SK-POS Support v{version} · OTA ✓</Text>
     </Screen>
   );
 }
@@ -232,13 +197,6 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 22, color: colors.inkFaint, lineHeight: 26 },
 
   bannerWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
-
-  serverCurrent: {
-    fontSize: fontSize.xs,
-    color: colors.inkSubtle,
-    fontFamily: 'monospace',
-    marginBottom: spacing.sm,
-  },
 
   footer: {
     textAlign: 'center',

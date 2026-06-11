@@ -27,9 +27,17 @@ import {
 import { colors, fontSize, spacing } from '@/lib/theme';
 import type { DuplicateInfo, PickedImage } from '@/lib/types';
 
-const PHONE_RE = /^\+?[0-9\s\-()]+$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PINCODE_RE = /^\d{4,10}$/;
+
+/** Normalise to a 10-digit Indian mobile, stripping a +91 / 91 / 0 prefix.
+ *  Returns null if it isn't a valid 10-digit number starting 6-9. */
+function normaliseIndianMobile(raw: string): string | null {
+  let d = raw.replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+  else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  return /^[6-9]\d{9}$/.test(d) ? d : null;
+}
 
 export default function NewTicketScreen() {
   const api = useApi();
@@ -88,12 +96,10 @@ export default function NewTicketScreen() {
     if (contactName.trim().length < 2) errs.contactName = 'Contact name is required.';
     if (!businessType) errs.businessType = 'Select a business type.';
 
-    const phoneTrim = phone.trim();
-    if (phoneTrim.length < 7) errs.phone = 'Enter a valid phone number.';
-    else if (!PHONE_RE.test(phoneTrim))
-      errs.phone = 'Only digits, +, -, spaces allowed.';
+    if (!normaliseIndianMobile(phone)) errs.phone = 'Enter a valid 10-digit mobile number.';
 
-    if (!EMAIL_RE.test(email.trim())) errs.email = 'Enter a valid email.';
+    // Email is optional — only validate the format if something was entered.
+    if (email.trim() && !EMAIL_RE.test(email.trim())) errs.email = 'Enter a valid email.';
 
     if (addressLine1.trim().length < 3) errs.addressLine1 = 'Address line 1 is required.';
     if (city.trim().length < 2) errs.city = 'City is required.';
@@ -120,8 +126,7 @@ export default function NewTicketScreen() {
       const body: Parameters<typeof api.createTicket>[0] = {
         business_name: businessName.trim(),
         contact_name: contactName.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
+        phone: normaliseIndianMobile(phone) ?? phone.trim(),
         business_type: businessType!,
         address_line1: addressLine1.trim(),
         city: city.trim(),
@@ -132,6 +137,7 @@ export default function NewTicketScreen() {
         issue_category: issueCategory!,
         description: description.trim(),
       };
+      if (email.trim()) body.email = email.trim();
       if (addressLine2.trim()) body.address_line2 = addressLine2.trim();
       if (addressLine3.trim()) body.address_line3 = addressLine3.trim();
       if (preferredContactTime) body.preferred_contact_time = preferredContactTime;
@@ -230,8 +236,7 @@ export default function NewTicketScreen() {
       />
 
       <Field
-        label="Email"
-        required
+        label="Email (optional)"
         value={email}
         onChangeText={setEmail}
         placeholder="customer@business.com"

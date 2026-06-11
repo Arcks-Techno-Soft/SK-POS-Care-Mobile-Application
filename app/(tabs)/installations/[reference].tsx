@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
+import { KeyboardAvoider } from '@/components/KeyboardAvoider';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { SignaturePad } from '@/components/SignaturePad';
 import { ErrorView, Loading } from '@/components/States';
@@ -59,10 +60,12 @@ export default function InstallationDetailScreen() {
       ) : error && !installation ? (
         <ErrorView message={error} onRetry={reload} />
       ) : installation ? (
+        <KeyboardAvoider style={styles.root}>
         <ScrollView
           style={styles.root}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -129,6 +132,7 @@ export default function InstallationDetailScreen() {
           {/* 6. Activity */}
           <ActivitySection reference={reference} api={api} />
         </ScrollView>
+        </KeyboardAvoider>
       ) : null}
     </View>
   );

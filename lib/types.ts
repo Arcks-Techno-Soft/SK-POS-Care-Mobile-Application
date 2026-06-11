@@ -83,7 +83,7 @@ export interface TicketDetail {
   reference: string;
   business_name: string;
   contact_name: string;
-  email: string;
+  email: string | null;
   phone: string;
   business_type?: string;
   address_line1: string;
