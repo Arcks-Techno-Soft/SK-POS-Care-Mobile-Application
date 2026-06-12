@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
 import { Section } from '@/components/ui/Section';
 import { Badge, Banner, Button, Divider, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
@@ -344,7 +345,8 @@ function ServiceFeeModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAwareSheet>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.sheetTitle}>Service fee</Text>
@@ -377,6 +379,7 @@ function ServiceFeeModal({
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAwareSheet>
     </Modal>
   );
 }
@@ -428,7 +431,8 @@ function EditSpareModal({
   };
 
   return (
-    <Modal visible={!!item} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={!!item} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAwareSheet>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.sheetTitle}>Edit spare</Text>
@@ -472,6 +476,7 @@ function EditSpareModal({
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAwareSheet>
     </Modal>
   );
 }
@@ -574,7 +579,8 @@ function AddSpareModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAwareSheet>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable
           style={[styles.sheet, styles.tallSheet]}
@@ -660,6 +666,7 @@ function AddSpareModal({
           </ScrollView>
         </Pressable>
       </Pressable>
+      </KeyboardAwareSheet>
     </Modal>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
+
 import { Section } from '@/components/ui/Section';
 import { Button, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
@@ -250,8 +252,10 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
         visible={resolveOpen}
         transparent
         animationType="slide"
+        statusBarTranslucent
         onRequestClose={() => setResolveOpen(false)}
       >
+        <KeyboardAwareSheet>
         <Pressable style={styles.backdrop} onPress={() => setResolveOpen(false)}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.sheetTitle}>Mark resolved</Text>
@@ -286,6 +290,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
             </View>
           </Pressable>
         </Pressable>
+        </KeyboardAwareSheet>
       </Modal>
     </Section>
   );

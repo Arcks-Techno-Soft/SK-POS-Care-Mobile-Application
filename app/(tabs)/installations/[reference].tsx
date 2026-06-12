@@ -7,14 +7,13 @@ import {
   Modal,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
-import { KeyboardAvoider } from '@/components/KeyboardAvoider';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { SignaturePad } from '@/components/SignaturePad';
 import { ErrorView, Loading } from '@/components/States';
@@ -60,11 +59,11 @@ export default function InstallationDetailScreen() {
       ) : error && !installation ? (
         <ErrorView message={error} onRetry={reload} />
       ) : installation ? (
-        <KeyboardAvoider style={styles.root}>
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.root}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          bottomOffset={spacing.xl}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -130,8 +129,7 @@ export default function InstallationDetailScreen() {
 
           {/* 6. Activity */}
           <ActivitySection reference={reference} api={api} />
-        </ScrollView>
-        </KeyboardAvoider>
+        </KeyboardAwareScrollView>
       ) : null}
     </View>
   );

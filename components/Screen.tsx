@@ -2,14 +2,13 @@
 
 import {
   RefreshControl,
-  ScrollView,
   StyleSheet,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
-import { KeyboardAvoider } from '@/components/KeyboardAvoider';
 import { colors, spacing } from '@/lib/theme';
 
 interface ScreenProps {
@@ -30,29 +29,32 @@ export function Screen({
   contentStyle,
 }: ScreenProps) {
   if (scroll) {
+    // KeyboardAwareScrollView scrolls the focused input just above the keyboard
+    // on demand. Unlike a KeyboardAvoidingView with behavior="padding", it does
+    // NOT reserve a keyboard-height block of empty space, so short forms no
+    // longer show a blank gap above the keyboard while typing.
     return (
-      <KeyboardAvoider style={styles.root}>
-        <ScrollView
-          style={styles.root}
-          contentContainerStyle={[
-            padded && styles.padded,
-            styles.scrollContent,
-            contentStyle,
-          ]}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl
-                refreshing={!!refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.inkMuted}
-              />
-            ) : undefined
-          }
-        >
-          {children}
-        </ScrollView>
-      </KeyboardAvoider>
+      <KeyboardAwareScrollView
+        style={styles.root}
+        contentContainerStyle={[
+          padded && styles.padded,
+          styles.scrollContent,
+          contentStyle,
+        ]}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={spacing.xl}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={!!refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.inkMuted}
+            />
+          ) : undefined
+        }
+      >
+        {children}
+      </KeyboardAwareScrollView>
     );
   }
   return (

@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
 import { Section } from '@/components/ui/Section';
 import { Badge, Banner, Button, Divider, Field } from '@/components/ui/kit';
 import { ApiError } from '@/lib/api';
@@ -206,8 +207,10 @@ function FeeModal({
       visible={!!sub}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
+      <KeyboardAwareSheet>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.sheetTitle}>Sub-engineer fee</Text>
@@ -241,6 +244,7 @@ function FeeModal({
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAwareSheet>
     </Modal>
   );
 }
@@ -330,8 +334,10 @@ function AddModal({
       visible={visible}
       transparent
       animationType="slide"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
+      <KeyboardAwareSheet>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable
           style={[styles.sheet, styles.tallSheet]}
@@ -414,6 +420,7 @@ function AddModal({
           </ScrollView>
         </Pressable>
       </Pressable>
+      </KeyboardAwareSheet>
     </Modal>
   );
 }

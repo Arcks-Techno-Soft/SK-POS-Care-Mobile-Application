@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
+import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
 import { SignaturePad } from '@/components/SignaturePad';
 import { Section } from '@/components/ui/Section';
 import { Badge, Banner, Button, Divider, Field } from '@/components/ui/kit';
@@ -260,8 +261,10 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
         visible={nameModalOpen}
         transparent
         animationType="slide"
+        statusBarTranslucent
         onRequestClose={() => setNameModalOpen(false)}
       >
+        <KeyboardAwareSheet>
         <Pressable style={styles.backdrop} onPress={() => setNameModalOpen(false)}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.sheetTitle}>Customer sign-off</Text>
@@ -303,6 +306,7 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
             </View>
           </Pressable>
         </Pressable>
+        </KeyboardAwareSheet>
       </Modal>
 
       {/* Customer signature pad */}

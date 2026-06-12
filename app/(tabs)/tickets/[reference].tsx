@@ -5,14 +5,13 @@ import {
   Alert,
   Linking,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
-import { KeyboardAvoider } from '@/components/KeyboardAvoider';
 import { EmptyState, Loading, ErrorView } from '@/components/States';
 import TicketCharges from '@/components/ticket/TicketCharges';
 import TicketEvents from '@/components/ticket/TicketEvents';
@@ -71,11 +70,11 @@ export default function TicketDetailScreen() {
       ) : error && !ticket ? (
         <ErrorView message={error} onRetry={reload} />
       ) : ticket ? (
-        <KeyboardAvoider style={styles.root}>
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.root}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          bottomOffset={spacing.xl}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -250,8 +249,7 @@ export default function TicketDetailScreen() {
             <TicketSignoff reference={reference} ticket={ticket} reload={reload} />
           )}
           <TicketEvents reference={reference} ticket={ticket} reload={reload} />
-        </ScrollView>
-        </KeyboardAvoider>
+        </KeyboardAwareScrollView>
       ) : null}
     </View>
   );

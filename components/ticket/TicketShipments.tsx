@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
 import { Section } from '@/components/ui/Section';
 import { Badge, Banner, Button, Divider, Field } from '@/components/ui/kit';
 import { ApiError } from '@/lib/api';
@@ -241,7 +242,8 @@ function AddShipmentModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAwareSheet>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable
           style={[styles.sheet, styles.tallSheet]}
@@ -324,6 +326,7 @@ function AddShipmentModal({
           </ScrollView>
         </Pressable>
       </Pressable>
+      </KeyboardAwareSheet>
     </Modal>
   );
 }
