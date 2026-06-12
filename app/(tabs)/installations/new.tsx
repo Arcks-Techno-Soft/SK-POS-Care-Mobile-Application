@@ -13,6 +13,12 @@ import { BUSINESS_TYPES } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
 import type { User } from '@/lib/types';
 
+type InvoiceMode = 'later' | 'enter';
+
+// Stored as the invoice number when the user defers entering one. The backend
+// requires a non-empty string, so this sentinel keeps the field valid.
+const INVOICE_DEFERRED = 'To be added later';
+
 export default function NewInstallationScreen() {
   const api = useApi();
   const router = useRouter();
@@ -25,6 +31,7 @@ export default function NewInstallationScreen() {
   const [contactName, setContactName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [invoiceMode, setInvoiceMode] = useState<InvoiceMode>('later');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [assignedEngineerId, setAssignedEngineerId] = useState<string | null>(null);
 
@@ -58,7 +65,8 @@ export default function NewInstallationScreen() {
     if (!businessCategory.trim()) errs.businessCategory = 'Business category is required.';
     if (!contactName.trim()) errs.contactName = 'Contact name is required.';
     if (!phone.trim()) errs.phone = 'Phone number is required.';
-    if (!invoiceNumber.trim()) errs.invoiceNumber = 'Invoice number is required.';
+    if (invoiceMode === 'enter' && !invoiceNumber.trim())
+      errs.invoiceNumber = 'Enter the invoice number, or choose “To be added later”.';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -81,7 +89,8 @@ export default function NewInstallationScreen() {
         business_category: businessCategory.trim(),
         contact_name: contactName.trim(),
         phone: phone.trim(),
-        invoice_number: invoiceNumber.trim(),
+        invoice_number:
+          invoiceMode === 'later' ? INVOICE_DEFERRED : invoiceNumber.trim(),
       };
       if (email.trim()) body.email = email.trim();
       if (assignedEngineerId) body.assigned_engineer_id = Number(assignedEngineerId);
@@ -165,16 +174,35 @@ export default function NewInstallationScreen() {
 
       <Text style={styles.sectionLabel}>Invoice</Text>
 
-      <Field
+      <Select
         label="Invoice Number"
         required
-        value={invoiceNumber}
-        onChangeText={setInvoiceNumber}
-        placeholder="e.g. INV-2024-001"
-        error={errors.invoiceNumber}
-        autoCapitalize="characters"
-        autoCorrect={false}
+        value={invoiceMode}
+        onChange={(v) => {
+          const mode = (v as InvoiceMode) || 'later';
+          setInvoiceMode(mode);
+          if (mode !== 'enter') setInvoiceNumber('');
+        }}
+        placeholder="Select…"
+        sheetTitle="Invoice Number"
+        options={[
+          { label: INVOICE_DEFERRED, value: 'later' },
+          { label: 'Enter invoice number', value: 'enter' },
+        ]}
       />
+
+      {invoiceMode === 'enter' && (
+        <Field
+          label="Invoice Number"
+          required
+          value={invoiceNumber}
+          onChangeText={setInvoiceNumber}
+          placeholder="e.g. INV-2024-001"
+          error={errors.invoiceNumber}
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
+      )}
 
       <Text style={styles.sectionLabel}>Assignment (optional)</Text>
 
