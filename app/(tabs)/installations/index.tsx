@@ -123,18 +123,18 @@ export default function InstallationsListScreen() {
     <View style={styles.root}>
       <Stack.Screen
         options={{
-          title: 'Installations',
-          headerRight: !isEngineer
-            ? () => (
-                <Pressable
-                  onPress={() => router.push('/(tabs)/installations/new')}
-                  hitSlop={10}
-                  style={{ marginRight: 4 }}
-                >
-                  <Ionicons name="add" size={26} color={colors.ink} />
-                </Pressable>
-              )
-            : undefined,
+          title: isEngineer ? 'My work' : 'Installations',
+          // Any staff member can open an installation; engineer-opened ones
+          // reach the admin queue tagged "Opened by <name>".
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push('/(tabs)/installations/new')}
+              hitSlop={10}
+              style={{ marginRight: 4 }}
+            >
+              <Ionicons name="add" size={26} color={colors.ink} />
+            </Pressable>
+          ),
         }}
       />
       <FlatList
@@ -236,6 +236,11 @@ function InstallationCard({
               ? installation.assigned_engineer.name
               : 'Unassigned'}
           </Text>
+          {installation.created_by && (
+            <Text style={styles.openedBy} numberOfLines={1}>
+              · Opened by {installation.created_by.name}
+            </Text>
+          )}
         </View>
         <Text style={styles.time}>{timeAgo(installation.created_at)}</Text>
       </View>
@@ -276,7 +281,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.surfaceSunken,
   },
-  assignRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  assignRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
   assign: { fontSize: fontSize.xs, color: colors.inkSubtle, fontWeight: '500' },
-  time: { fontSize: fontSize.xs, color: colors.inkSubtle },
+  openedBy: { flexShrink: 1, fontSize: fontSize.xs, color: colors.inkSubtle },
+  time: { fontSize: fontSize.xs, color: colors.inkSubtle, marginLeft: spacing.sm },
 });

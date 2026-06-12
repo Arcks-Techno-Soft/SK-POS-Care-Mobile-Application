@@ -1,9 +1,8 @@
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { Screen } from '@/components/Screen';
-import { EmptyState } from '@/components/States';
 import { Banner, Button, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
@@ -39,25 +38,17 @@ export default function NewInstallationScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
-  const { data: engineers } = useQuery<User[]>(() => api.listEngineers(), []);
+  // Engineers can open installations but not pre-assign them — their
+  // installation lands in the admin queue tagged "Opened by <name>".
+  const { data: engineers } = useQuery<User[]>(
+    () => (isEngineer ? Promise.resolve([]) : api.listEngineers()),
+    [isEngineer]
+  );
 
   const engineerOptions = [
     { label: 'None (unassigned)', value: '' },
     ...(engineers ?? []).map((e) => ({ label: e.name, value: String(e.id) })),
   ];
-
-  if (isEngineer) {
-    return (
-      <View style={styles.root}>
-        <Stack.Screen options={{ title: 'New Installation' }} />
-        <EmptyState
-          icon="lock-closed-outline"
-          title="Not available"
-          subtitle="Only managers and owners can create installations."
-        />
-      </View>
-    );
-  }
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -204,16 +195,20 @@ export default function NewInstallationScreen() {
         />
       )}
 
-      <Text style={styles.sectionLabel}>Assignment (optional)</Text>
+      {!isEngineer && (
+        <>
+          <Text style={styles.sectionLabel}>Assignment (optional)</Text>
 
-      <Select
-        label="Assign Engineer"
-        value={assignedEngineerId}
-        onChange={(v) => setAssignedEngineerId(v || null)}
-        placeholder="None (unassigned)"
-        sheetTitle="Assign Engineer"
-        options={engineerOptions}
-      />
+          <Select
+            label="Assign Engineer"
+            value={assignedEngineerId}
+            onChange={(v) => setAssignedEngineerId(v || null)}
+            placeholder="None (unassigned)"
+            sheetTitle="Assign Engineer"
+            options={engineerOptions}
+          />
+        </>
+      )}
 
       <Button
         title="Create Installation"

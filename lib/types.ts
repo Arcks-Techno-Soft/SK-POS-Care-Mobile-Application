@@ -131,6 +131,7 @@ export interface TicketListItem {
   severity: Severity;
   status: TicketStatus;
   warranty_status: WarrantyStatus;
+  raised_by: User | null;
   assigned_engineer: User | null;
   created_at: string;
 }
@@ -265,6 +266,7 @@ export interface InstallationListItem {
   phone: string;
   invoice_number: string;
   status: InstallationStatus;
+  created_by: User | null;
   assigned_engineer: User | null;
   created_at: string;
 }

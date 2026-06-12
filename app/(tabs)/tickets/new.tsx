@@ -3,7 +3,8 @@
  *
  * Mirrors the public web "Raise a ticket" form (frontend/components/ticket-form)
  * so staff can capture the same details when the customer can't submit it
- * themselves. Engineers are blocked — triage is an Owner/Manager task.
+ * themselves. Any staff member (Owner / Manager / Engineer) can raise one;
+ * engineer-raised tickets land in the admin inbox tagged "Opened by <name>".
  */
 
 import { Stack, useRouter } from 'expo-router';
@@ -12,11 +13,10 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { Screen } from '@/components/Screen';
-import { EmptyState } from '@/components/States';
 import { Banner, Button, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
-import { useApi, useAuth } from '@/lib/auth';
+import { useApi } from '@/lib/auth';
 import {
   BUSINESS_TYPES,
   INDIAN_STATES,
@@ -42,8 +42,6 @@ function normaliseIndianMobile(raw: string): string | null {
 export default function NewTicketScreen() {
   const api = useApi();
   const router = useRouter();
-  const { user } = useAuth();
-  const isEngineer = user?.role === 'ENGINEER';
 
   // Business
   const [businessName, setBusinessName] = useState('');
@@ -76,19 +74,6 @@ export default function NewTicketScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
-
-  if (isEngineer) {
-    return (
-      <View style={styles.root}>
-        <Stack.Screen options={{ title: 'New ticket' }} />
-        <EmptyState
-          icon="lock-closed-outline"
-          title="Not available"
-          subtitle="Only managers and owners can raise a ticket on behalf of a customer."
-        />
-      </View>
-    );
-  }
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};

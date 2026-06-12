@@ -141,17 +141,17 @@ export default function TicketsListScreen() {
       <Stack.Screen
         options={{
           title: isEngineer ? 'My work' : 'Tickets',
-          headerRight: !isEngineer
-            ? () => (
-                <Pressable
-                  onPress={() => router.push('/(tabs)/tickets/new')}
-                  hitSlop={10}
-                  style={{ marginRight: 4 }}
-                >
-                  <Ionicons name="add" size={26} color={colors.ink} />
-                </Pressable>
-              )
-            : undefined,
+          // Any staff member can open a ticket; engineer-opened ones reach the
+          // admin inbox tagged "Opened by <name>".
+          headerRight: () => (
+            <Pressable
+              onPress={() => router.push('/(tabs)/tickets/new')}
+              hitSlop={10}
+              style={{ marginRight: 4 }}
+            >
+              <Ionicons name="add" size={26} color={colors.ink} />
+            </Pressable>
+          ),
         }}
       />
       <FlatList
@@ -258,6 +258,11 @@ function TicketCard({
         <Text style={styles.assign}>
           {ticket.assigned_engineer ? ticket.assigned_engineer.name : 'Unassigned'}
         </Text>
+        {ticket.raised_by && (
+          <Text style={styles.openedBy} numberOfLines={1}>
+            · Opened by {ticket.raised_by.name}
+          </Text>
+        )}
       </View>
     </Card>
   );
@@ -307,4 +312,5 @@ const styles = StyleSheet.create({
     borderTopColor: colors.surfaceSunken,
   },
   assign: { fontSize: fontSize.xs, color: colors.inkSubtle, fontWeight: '500' },
+  openedBy: { flex: 1, fontSize: fontSize.xs, color: colors.inkSubtle },
 });
