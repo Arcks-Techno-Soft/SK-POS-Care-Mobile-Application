@@ -102,6 +102,7 @@ export interface TicketDetail {
   status: TicketStatus;
   warranty_status: WarrantyStatus;
   preferred_contact_time?: string | null;
+  raised_by: User | null;
   acknowledged_by: User | null;
   acknowledged_at: string | null;
   assigned_by: User | null;

@@ -112,6 +112,14 @@ export default function TicketDetailScreen() {
           {/* Customer & site */}
           <Section title="Customer & site">
             <KeyValue label="Contact" value={ticket.contact_name} />
+            {!!ticket.raised_by && (
+              <KeyValue
+                label="Raised by"
+                value={`${ticket.raised_by.name}${
+                  ticket.raised_by.role === 'ENGINEER' ? ' (Engineer)' : ''
+                }`}
+              />
+            )}
             <KeyValue
               label="Phone"
               value={
