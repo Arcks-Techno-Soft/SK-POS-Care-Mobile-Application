@@ -82,9 +82,6 @@ export async function getExpoPushToken(): Promise<string | null> {
 
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   cachedToken = data;
-  console.log('[push] ====================================');
-  console.log('[push] EXPO PUSH TOKEN:', data);
-  console.log('[push] ====================================');
   return data;
 }
 
