@@ -22,6 +22,7 @@ import { Section } from '@/components/ui/Section';
 import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
+import { usePendingTickets } from '@/lib/pending-tickets';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
 import { prettyEnum, roleLabel } from '@/lib/options';
@@ -47,6 +48,13 @@ export default function InstallationDetailScreen() {
     refresh,
     reload,
   } = useQuery<InstallationDetail>(() => api.getInstallation(reference), [reference]);
+
+  const { refresh: refreshPending } = usePendingTickets();
+  // Reload the installation AND refresh the tab badge after any workflow action.
+  const reloadAndBadge = () => {
+    reload();
+    refreshPending();
+  };
 
   const canManage = user?.role === 'MANAGER' || user?.role === 'OWNER';
 
@@ -92,7 +100,7 @@ export default function InstallationDetailScreen() {
             installation={installation}
             canManage={canManage}
             api={api}
-            onReload={reload}
+            onReload={reloadAndBadge}
           />
 
           {/* 3. Details */}
@@ -124,7 +132,7 @@ export default function InstallationDetailScreen() {
 
           {/* 5. Sign-off (COMPLETED or CLOSED) */}
           {(installation.status === 'COMPLETED' || installation.status === 'CLOSED') && (
-            <SignoffSection installation={installation} api={api} onReload={reload} />
+            <SignoffSection installation={installation} api={api} onReload={reloadAndBadge} />
           )}
 
           {/* 6. Activity */}

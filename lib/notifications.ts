@@ -56,7 +56,10 @@ function getProjectId(): string | null {
 /** Request permission and return this device's Expo push token, or null. */
 export async function getExpoPushToken(): Promise<string | null> {
   // Simulators/emulators can't receive a real push token.
-  if (!Device.isDevice) return null;
+  if (!Device.isDevice) {
+    console.log('[push] not a physical device — no token');
+    return null;
+  }
 
   await ensureAndroidChannel();
 
@@ -66,13 +69,22 @@ export async function getExpoPushToken(): Promise<string | null> {
     const req = await Notifications.requestPermissionsAsync();
     granted = req.granted || req.status === 'granted';
   }
-  if (!granted) return null;
+  if (!granted) {
+    console.log('[push] notification permission NOT granted');
+    return null;
+  }
 
   const projectId = getProjectId();
-  if (!projectId) return null;
+  if (!projectId) {
+    console.log('[push] no EAS projectId found in config');
+    return null;
+  }
 
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   cachedToken = data;
+  console.log('[push] ====================================');
+  console.log('[push] EXPO PUSH TOKEN:', data);
+  console.log('[push] ====================================');
   return data;
 }
 

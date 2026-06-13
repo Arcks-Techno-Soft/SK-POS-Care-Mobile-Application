@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
+import { usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type { TicketDetail, User } from '@/lib/types';
 
@@ -29,6 +30,7 @@ function errMsg(e: unknown): string {
 export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const api = useApi();
   const { user } = useAuth();
+  const { refresh: refreshPending } = usePendingTickets();
 
   const [busy, setBusy] = useState(false);
   const [engineers, setEngineers] = useState<User[] | null>(null);
@@ -50,6 +52,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
     try {
       await action();
       reload();
+      refreshPending(); // keep the Tickets-tab "awaiting acceptance" badge in sync
     } catch (e) {
       Alert.alert('Workflow', errMsg(e));
     } finally {
