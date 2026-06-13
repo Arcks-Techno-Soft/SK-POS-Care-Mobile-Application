@@ -46,6 +46,9 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const isManagerOrOwner = user?.role === 'MANAGER' || user?.role === 'OWNER';
   const assignedToMe =
     ticket.assigned_engineer != null && ticket.assigned_engineer.id === user?.id;
+  // Warranty must be decided before assigning. Mirrors the backend gate so the
+  // user sees why the Assign buttons are disabled instead of hitting a 400.
+  const warrantyUnknown = ticket.warranty_status === 'UNKNOWN';
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -114,6 +117,12 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
 
         {ticket.status === 'ACKNOWLEDGED' && (
           <>
+            {warrantyUnknown && (
+              <Text style={styles.warrantyNote}>
+                Set the warranty status (Under / Out of Warranty) above before
+                assigning this ticket.
+              </Text>
+            )}
             <Select
               label="Assign to engineer"
               value={pickedEngineer}
@@ -145,7 +154,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               title="Assign"
               icon="person-add-outline"
               loading={busy}
-              disabled={!pickedEngineer}
+              disabled={!pickedEngineer || warrantyUnknown}
               onPress={() =>
                 run(() => api.assignTicket(reference, Number(pickedEngineer)))
               }
@@ -155,6 +164,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                 title="Assign to me"
                 variant="secondary"
                 loading={busy}
+                disabled={warrantyUnknown}
                 onPress={() => run(() => api.selfAssignTicket(reference))}
               />
             )}
@@ -302,6 +312,14 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
 const styles = StyleSheet.create({
   body: { gap: spacing.sm },
   muted: { fontSize: fontSize.sm, color: colors.inkSubtle, lineHeight: 20 },
+  warrantyNote: {
+    fontSize: fontSize.sm,
+    color: colors.warn,
+    backgroundColor: colors.warnSoft,
+    lineHeight: 20,
+    padding: spacing.sm,
+    borderRadius: radius.sm,
+  },
   engineersError: { gap: spacing.sm },
   trail: { gap: 4, marginTop: spacing.xs },
   trailLine: { fontSize: fontSize.xs, color: colors.inkSubtle },
