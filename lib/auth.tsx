@@ -13,6 +13,7 @@
  */
 
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as Notifications from 'expo-notifications';
 import {
   createContext,
   useCallback,
@@ -26,6 +27,12 @@ import {
 import { AppState } from 'react-native';
 
 import { Api, ApiError, normalizeBaseUrl } from './api';
+import {
+  clearBadge,
+  configureNotifications,
+  registerForPush,
+  unregisterForPush,
+} from './notifications';
 import * as storage from './storage';
 import type { Role, User } from './types';
 
@@ -118,6 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(session.user);
     setLockedAccount({ name: session.user.name, role: session.user.role });
     setStatus('authenticated');
+    // Register this device for push (best-effort) now that we have a token,
+    // and clear any stale app-icon badge.
+    void registerForPush(apiRef.current);
+    void clearBadge();
   }, []);
 
   /** Get a fresh JWT: reuse a still-valid cached one, else re-login. */
@@ -162,6 +173,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applySession]);
 
   const doSignOut = useCallback(async () => {
+    // Unregister push BEFORE clearing the token (the call needs auth).
+    await unregisterForPush(apiRef.current);
     await storage.wipeAccount();
     tokenRef.current = null;
     setUser(null);
@@ -215,6 +228,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------- notifications setup ---------- */
+
+  useEffect(() => {
+    // Foreground display behaviour (banner/sound/badge).
+    configureNotifications();
+    // Clear the app-icon badge whenever the user taps a notification or
+    // brings the app forward.
+    const responseSub = Notifications.addNotificationResponseReceivedListener(() => {
+      void clearBadge();
+    });
+    const appStateSub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void clearBadge();
+    });
+    return () => {
+      responseSub.remove();
+      appStateSub.remove();
+    };
   }, []);
 
   /* ---------- auto-lock on background ---------- */

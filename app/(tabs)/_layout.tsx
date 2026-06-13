@@ -2,10 +2,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { useAuth } from '@/lib/auth';
+import { PendingTicketsProvider, usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize } from '@/lib/theme';
 
 export default function TabsLayout() {
+  return (
+    <PendingTicketsProvider>
+      <TabsInner />
+    </PendingTicketsProvider>
+  );
+}
+
+function TabsInner() {
   const { user } = useAuth();
+  const { ticketCount, installCount } = usePendingTickets();
   const isOwner = user?.role === 'OWNER';
 
   return (
@@ -25,6 +35,9 @@ export default function TabsLayout() {
         name="tickets"
         options={{
           title: 'Tickets',
+          // Engineer: assigned-not-accepted. Owner/Manager: unassigned.
+          tabBarBadge: ticketCount > 0 ? ticketCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.danger, color: '#fff', fontSize: 11 },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="construct-outline" size={size} color={color} />
           ),
@@ -34,6 +47,9 @@ export default function TabsLayout() {
         name="installations"
         options={{
           title: 'Installs',
+          // Engineer: assigned-not-actioned. Owner/Manager: unassigned (NEW).
+          tabBarBadge: installCount > 0 ? installCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.danger, color: '#fff', fontSize: 11 },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cube-outline" size={size} color={color} />
           ),

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "329388562645",
+    "project_id": "sk-pos-care",
+    "storage_bucket": "sk-pos-care.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:329388562645:android:4ec59e140dd8b464446a5c",
+        "android_client_info": {
+          "package_name": "com.arckstechnosoft.skposcare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSUZZePrqR9zePmAdKyp69mmW_7P9JssM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

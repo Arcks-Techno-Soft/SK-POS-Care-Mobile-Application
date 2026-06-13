@@ -184,6 +184,20 @@ export class Api {
     return this.request<User>('GET', '/auth/me');
   }
 
+  /* ---------------- push notifications ---------------- */
+
+  registerPushToken(token: string, platform: string): Promise<void> {
+    return this.request<void>('POST', '/admin/push/register', {
+      json: { token, platform },
+    });
+  }
+
+  unregisterPushToken(token: string): Promise<void> {
+    return this.request<void>('POST', '/admin/push/unregister', {
+      json: { token },
+    });
+  }
+
   /* ---------------- tickets ---------------- */
 
   /**

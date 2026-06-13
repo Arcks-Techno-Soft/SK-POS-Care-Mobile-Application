@@ -12,6 +12,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -57,12 +58,34 @@ function Row({
 /* ---------- main screen ---------- */
 
 export default function MoreScreen() {
-  const { user, biometricAvailable, biometricEnabled, enableBiometric, disableBiometric, lock, signOut } = useAuth();
+  const { user, biometricAvailable, biometricEnabled, enableBiometric, disableBiometric, lock, signOut, serverUrl, setServerUrl } = useAuth();
   const router = useRouter();
 
   const [bioError, setBioError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState(serverUrl);
 
   const version = Constants.expoConfig?.version ?? '—';
+
+  /* ---- server URL override (for staging/test backends) ---- */
+  async function handleSaveServerUrl() {
+    const next = urlInput.trim();
+    if (!next) return;
+    Alert.alert(
+      'Switch server & sign out',
+      `Point the app at:\n${next}\n\nYou'll be signed out and need to sign in again against this server.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Switch',
+          style: 'destructive',
+          onPress: async () => {
+            await setServerUrl(next);
+            await signOut();
+          },
+        },
+      ],
+    );
+  }
 
   /* ---- biometric toggle ---- */
   async function handleBioToggle(val: boolean) {
@@ -159,6 +182,24 @@ export default function MoreScreen() {
         </Section>
       )}
 
+      {/* ---- Advanced: server URL override ---- */}
+      <Section title="Advanced" flush>
+        <View style={styles.serverBox}>
+          <Text style={styles.rowSub}>Server URL</Text>
+          <TextInput
+            value={urlInput}
+            onChangeText={setUrlInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            placeholder="https://your-backend.onrender.com"
+            placeholderTextColor={colors.inkFaint}
+            style={styles.serverInput}
+          />
+          <Button title="Switch server & sign out" variant="secondary" onPress={handleSaveServerUrl} />
+        </View>
+      </Section>
+
       {/* ---- Sign out ---- */}
       <Button title="Sign out" variant="danger" onPress={handleSignOut} />
 
@@ -197,6 +238,18 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 22, color: colors.inkFaint, lineHeight: 26 },
 
   bannerWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+
+  serverBox: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
+  serverInput: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 10,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    backgroundColor: colors.surface,
+  },
 
   footer: {
     textAlign: 'center',
