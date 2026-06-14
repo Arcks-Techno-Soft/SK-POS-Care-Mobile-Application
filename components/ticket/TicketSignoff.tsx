@@ -36,7 +36,7 @@ function errMsg(e: unknown): string {
 export default function TicketSignoff({ reference, ticket, reload }: Props) {
   const api = useApi();
   const { user } = useAuth();
-  const isManagerOrOwner = user?.role === 'MANAGER' || user?.role === 'OWNER';
+  const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   const resolution = ticket.resolution;
   const customerSigned = !!resolution?.customer_signed_at;
@@ -244,7 +244,7 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
           loading={busy}
           onPress={openPdf}
         />
-        {isManagerOrOwner && (
+        {isManagerOrAdmin && (
           <Button
             title="Regenerate PDF"
             icon="refresh-outline"

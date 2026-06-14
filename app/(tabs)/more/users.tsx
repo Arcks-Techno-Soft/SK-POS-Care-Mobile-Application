@@ -1,5 +1,5 @@
 /**
- * Staff accounts screen — Owner only.
+ * Staff accounts screen — Admin only.
  * Lists all users (managers + engineers) and allows activation/deactivation
  * and creating new staff accounts.
  */
@@ -335,13 +335,13 @@ export default function UsersScreen() {
     [],
   );
 
-  if (currentUser?.role !== 'OWNER') {
+  if (currentUser?.role !== 'ADMIN') {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Staff accounts' }} />
         <EmptyState
           icon="lock-closed-outline"
-          title="Owners only"
+          title="Admins only"
           subtitle="Only owners can manage staff accounts."
         />
       </Screen>

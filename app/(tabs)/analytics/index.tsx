@@ -1,5 +1,5 @@
 /**
- * Analytics dashboard — Owner only.
+ * Analytics dashboard — Admin only.
  * Shows KPI cards, status/severity breakdowns, per-day series, issue/product
  * breakdowns, and engineer performance. All data from GET /admin/analytics.
  */
@@ -128,13 +128,13 @@ export default function AnalyticsScreen() {
     [days],
   );
 
-  if (user?.role !== 'OWNER') {
+  if (user?.role !== 'ADMIN') {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Analytics' }} />
         <EmptyState
           icon="lock-closed-outline"
-          title="Owners only"
+          title="Admins only"
           subtitle="The analytics dashboard is only available to owners."
         />
       </Screen>

@@ -53,7 +53,7 @@ export default function TicketDetailScreen() {
     reload,
   } = useQuery<TicketDetail>(() => api.getTicket(reference), [reference]);
 
-  const canEditMeta = user?.role === 'MANAGER' || user?.role === 'OWNER';
+  const canEditMeta = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   return (
     <View style={styles.root}>

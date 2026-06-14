@@ -16,7 +16,7 @@ export default function TabsLayout() {
 function TabsInner() {
   const { user } = useAuth();
   const { ticketCount, installCount } = usePendingTickets();
-  const isOwner = user?.role === 'OWNER';
+  const isAdmin = user?.role === 'ADMIN';
 
   return (
     <Tabs
@@ -35,7 +35,7 @@ function TabsInner() {
         name="tickets"
         options={{
           title: 'Tickets',
-          // Engineer: assigned-not-accepted. Owner/Manager: unassigned.
+          // Engineer: assigned-not-accepted. Admin/Manager: unassigned.
           tabBarBadge: ticketCount > 0 ? ticketCount : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.danger, color: '#fff', fontSize: 11 },
           tabBarIcon: ({ color, size }) => (
@@ -47,7 +47,7 @@ function TabsInner() {
         name="installations"
         options={{
           title: 'Installs',
-          // Engineer: assigned-not-actioned. Owner/Manager: unassigned (NEW).
+          // Engineer: assigned-not-actioned. Admin/Manager: unassigned (NEW).
           tabBarBadge: installCount > 0 ? installCount : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.danger, color: '#fff', fontSize: 11 },
           tabBarIcon: ({ color, size }) => (
@@ -59,7 +59,7 @@ function TabsInner() {
         name="analytics"
         options={{
           title: 'Analytics',
-          href: isOwner ? undefined : null,
+          href: isAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),

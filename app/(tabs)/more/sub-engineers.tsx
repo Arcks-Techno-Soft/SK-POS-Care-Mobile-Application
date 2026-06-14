@@ -1,5 +1,5 @@
 /**
- * Sub-engineer roster — Owner only.
+ * Sub-engineer roster — Admin only.
  * Lists all roster contacts with district filter, add/edit/toggle-active.
  */
 
@@ -336,13 +336,13 @@ export default function SubEngineersScreen() {
     [],
   );
 
-  if (user?.role !== 'OWNER') {
+  if (user?.role !== 'ADMIN') {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Sub-engineer roster' }} />
         <EmptyState
           icon="lock-closed-outline"
-          title="Owners only"
+          title="Admins only"
           subtitle="Only owners can manage the sub-engineer roster."
         />
       </Screen>
