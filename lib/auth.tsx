@@ -121,9 +121,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const applySession = useCallback((session: storage.StoredSession) => {
+    // Legacy: the backend still sends role "OWNER" for un-migrated admins;
+    // treat it as ADMIN everywhere in the app.
+    const u =
+      (session.user.role as string) === 'OWNER'
+        ? { ...session.user, role: 'ADMIN' as typeof session.user.role }
+        : session.user;
     tokenRef.current = session.token;
-    setUser(session.user);
-    setLockedAccount({ name: session.user.name, role: session.user.role });
+    setUser(u);
+    setLockedAccount({ name: u.name, role: u.role });
     setStatus('authenticated');
     // Register this device for push (best-effort) now that we have a token,
     // and clear any stale app-icon badge.
@@ -212,7 +218,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const cached = await storage.getSession();
       if (cached) {
-        setLockedAccount({ name: cached.user.name, role: cached.user.role });
+        const role =
+          (cached.user.role as string) === 'OWNER' ? 'ADMIN' : cached.user.role;
+        setLockedAccount({ name: cached.user.name, role });
       } else {
         setLockedAccount({ name: creds.username, role: null });
       }
