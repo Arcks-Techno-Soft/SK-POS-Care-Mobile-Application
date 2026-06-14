@@ -164,7 +164,7 @@ export default function MoreScreen() {
       </Section>
 
       {/* ---- Workspace (owner-only) ---- */}
-      {user?.role === 'OWNER' && (
+      {user?.role === 'ADMIN' && (
         <Section title="Workspace" flush>
           <Row
             label="Staff accounts"

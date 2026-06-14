@@ -4,7 +4,7 @@
  * Meaning depends on role:
  *   - ENGINEER: tickets/installations assigned to ME that I haven't accepted /
  *     actioned yet (status ASSIGNED) — i.e. "waiting on me".
- *   - OWNER / MANAGER: tickets/installations NOT assigned to anyone yet — i.e.
+ *   - ADMIN / MANAGER: tickets/installations NOT assigned to anyone yet — i.e.
  *     "needs assignment". For tickets that's OPEN + ACKNOWLEDGED; for
  *     installations that's NEW.
  *
@@ -63,7 +63,7 @@ export function PendingTicketsProvider({ children }: { children: ReactNode }) {
         setTicketCount(t.total);
         setInstallCount(i.total);
       } else {
-        // Owner / Manager: unassigned items that still need an engineer.
+        // Admin / Manager: unassigned items that still need an engineer.
         const [open, ack, instNew] = await Promise.all([
           api.listTickets({ status: 'OPEN', limit: 1 }),
           api.listTickets({ status: 'ACKNOWLEDGED', limit: 1 }),

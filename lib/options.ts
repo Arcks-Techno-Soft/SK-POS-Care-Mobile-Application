@@ -115,10 +115,10 @@ export const INDIAN_STATES = [
 /** Human-readable label for a role. MANAGER is shown as "Admin" (matches web). */
 export function roleLabel(role: Role): string {
   switch (role) {
-    case 'OWNER':
-      return 'Owner';
-    case 'MANAGER':
+    case 'ADMIN':
       return 'Admin';
+    case 'MANAGER':
+      return 'Manager';
     case 'ENGINEER':
       return 'Engineer';
     default:

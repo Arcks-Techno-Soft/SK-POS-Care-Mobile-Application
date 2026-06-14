@@ -3,7 +3,7 @@
  *
  * Mirrors the public web "Raise a ticket" form (frontend/components/ticket-form)
  * so staff can capture the same details when the customer can't submit it
- * themselves. Any staff member (Owner / Manager / Engineer) can raise one;
+ * themselves. Any staff member (Admin / Manager / Engineer) can raise one;
  * engineer-raised tickets land in the admin inbox tagged "Opened by <name>".
  */
 

@@ -56,8 +56,8 @@ export default function InstallationDetailScreen() {
     refreshPending();
   };
 
-  const canManage = user?.role === 'MANAGER' || user?.role === 'OWNER';
-  // Invoice is editable by the assignee / Owner / Manager, but only until the
+  const canManage = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  // Invoice is editable by the assignee / Admin / Manager, but only until the
   // installation is CLOSED (after which it's frozen into the signed PDF).
   const canEditInvoice =
     !!installation &&

@@ -43,7 +43,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
 
-  const isManagerOrOwner = user?.role === 'MANAGER' || user?.role === 'OWNER';
+  const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
   const assignedToMe =
     ticket.assigned_engineer != null && ticket.assigned_engineer.id === user?.id;
   // Warranty must be decided before assigning. Mirrors the backend gate so the
@@ -159,7 +159,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                 run(() => api.assignTicket(reference, Number(pickedEngineer)))
               }
             />
-            {isManagerOrOwner && (
+            {isManagerOrAdmin && (
               <Button
                 title="Assign to me"
                 variant="secondary"
