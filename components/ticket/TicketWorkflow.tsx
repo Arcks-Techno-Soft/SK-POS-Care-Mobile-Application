@@ -77,12 +77,41 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
     }
   };
 
-  // Engineers populate the assign dropdown — load them automatically as soon
-  // as the ticket is acknowledged and ready to be assigned.
+  // Engineers populate the assign dropdown — load them automatically once the
+  // ticket is ready to be assigned (ACKNOWLEDGED) or, for managers/admins, while
+  // it sits ASSIGNED-but-not-yet-accepted so it can be re-assigned.
   useEffect(() => {
-    if (ticket.status === 'ACKNOWLEDGED') loadEngineers();
+    if (
+      ticket.status === 'ACKNOWLEDGED' ||
+      (ticket.status === 'ASSIGNED' && isManagerOrAdmin)
+    ) {
+      loadEngineers();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.status]);
+
+  // Re-assign a still-unaccepted ticket to a different engineer. Reuses the
+  // assign endpoint, which overwrites the current assignee server-side.
+  const confirmReassign = () => {
+    if (!pickedEngineer) return;
+    const target = engineers?.find((e) => String(e.id) === pickedEngineer);
+    Alert.alert(
+      'Re-assign ticket',
+      `Re-assign this ticket to ${target?.name ?? 'the selected engineer'}? ` +
+        `${ticket.assigned_engineer?.name ?? 'The current engineer'} will no longer be assigned.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Re-assign',
+          onPress: () =>
+            run(async () => {
+              await api.assignTicket(reference, Number(pickedEngineer));
+              setPickedEngineer(null);
+            }),
+        },
+      ],
+    );
+  };
 
   const submitResolve = async () => {
     if (summary.trim().length < 10) {
@@ -119,8 +148,8 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
           <>
             {warrantyUnknown && (
               <Text style={styles.warrantyNote}>
-                Set the warranty status (Under / Out of Warranty) above before
-                assigning this ticket.
+                Set the warranty status (Under Warranty / Out of Warranty / AMC)
+                above before assigning this ticket.
               </Text>
             )}
             <Select
@@ -171,20 +200,69 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
           </>
         )}
 
-        {ticket.status === 'ASSIGNED' &&
-          (assignedToMe ? (
-            <Button
-              title="Accept ticket"
-              icon="hand-left-outline"
-              loading={busy}
-              onPress={() => run(() => api.acceptTicket(reference))}
-            />
-          ) : (
-            <Text style={styles.muted}>
-              Assigned to {ticket.assigned_engineer?.name ?? 'an engineer'} — awaiting
-              their acceptance.
-            </Text>
-          ))}
+        {ticket.status === 'ASSIGNED' && (
+          <>
+            {assignedToMe ? (
+              <Button
+                title="Accept ticket"
+                icon="hand-left-outline"
+                loading={busy}
+                onPress={() => run(() => api.acceptTicket(reference))}
+              />
+            ) : (
+              <Text style={styles.muted}>
+                Assigned to {ticket.assigned_engineer?.name ?? 'an engineer'} — awaiting
+                their acceptance.
+              </Text>
+            )}
+
+            {/* The engineer hasn't accepted yet, so a manager/admin can hand the
+                ticket to someone else. */}
+            {isManagerOrAdmin && (
+              <View style={styles.reassign}>
+                <Text style={styles.reassignHint}>
+                  Not accepted yet — re-assign to a different engineer if needed.
+                </Text>
+                <Select
+                  label="Re-assign to engineer"
+                  value={pickedEngineer}
+                  placeholder={
+                    loadingEngineers ? 'Loading engineers…' : 'Select an engineer…'
+                  }
+                  sheetTitle="Engineers"
+                  options={(engineers ?? [])
+                    .filter((e) => e.id !== ticket.assigned_engineer?.id)
+                    .map((e) => ({
+                      label: e.name,
+                      value: String(e.id),
+                      sublabel: e.district ?? undefined,
+                    }))}
+                  onChange={setPickedEngineer}
+                />
+                {engineersError && (
+                  <View style={styles.engineersError}>
+                    <Text style={styles.muted}>{engineersError}</Text>
+                    <Button
+                      title="Retry"
+                      variant="secondary"
+                      size="sm"
+                      loading={loadingEngineers}
+                      onPress={loadEngineers}
+                    />
+                  </View>
+                )}
+                <Button
+                  title="Re-assign"
+                  icon="swap-horizontal-outline"
+                  variant="secondary"
+                  loading={busy}
+                  disabled={!pickedEngineer}
+                  onPress={confirmReassign}
+                />
+              </View>
+            )}
+          </>
+        )}
 
         {ticket.status === 'ACCEPTED' &&
           (assignedToMe ? (
@@ -321,6 +399,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   engineersError: { gap: spacing.sm },
+  reassign: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  reassignHint: { fontSize: fontSize.sm, color: colors.inkSubtle, lineHeight: 20 },
   trail: { gap: 4, marginTop: spacing.xs },
   trailLine: { fontSize: fontSize.xs, color: colors.inkSubtle },
 

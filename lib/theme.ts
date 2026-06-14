@@ -135,6 +135,8 @@ export function warrantyTone(warranty: string): Tone {
       return 'success';
     case 'OUT_OF_WARRANTY':
       return 'danger';
+    case 'AMC':
+      return 'info';
     default:
       return 'neutral';
   }

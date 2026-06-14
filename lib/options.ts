@@ -27,10 +27,13 @@ export const INSTALLATION_STATUSES: InstallationStatus[] = [
 
 export const SEVERITIES: Severity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
+// Selectable warranty statuses. UNKNOWN is intentionally excluded — it is only
+// the initial (unset) state of a freshly raised ticket; the user must pick one
+// of these three before the ticket can be assigned.
 export const WARRANTY_STATUSES: WarrantyStatus[] = [
-  'UNKNOWN',
   'UNDER_WARRANTY',
   'OUT_OF_WARRANTY',
+  'AMC',
 ];
 
 export const ASSIGNABLE_ROLES: Role[] = ['MANAGER', 'ENGINEER'];
@@ -126,8 +129,12 @@ export function roleLabel(role: Role): string {
   }
 }
 
+/** Enum values that should keep their literal casing (acronyms). */
+const ENUM_ACRONYMS = new Set(['AMC']);
+
 /** Title-case an enum value, e.g. UNDER_WARRANTY -> "Under Warranty". */
 export function prettyEnum(value: string): string {
+  if (ENUM_ACRONYMS.has(value)) return value;
   return value
     .split('_')
     .map((w) => w.charAt(0) + w.slice(1).toLowerCase())

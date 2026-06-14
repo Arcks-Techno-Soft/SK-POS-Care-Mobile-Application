@@ -16,7 +16,7 @@ export type TicketStatus =
 
 export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-export type WarrantyStatus = 'UNKNOWN' | 'UNDER_WARRANTY' | 'OUT_OF_WARRANTY';
+export type WarrantyStatus = 'UNKNOWN' | 'UNDER_WARRANTY' | 'OUT_OF_WARRANTY' | 'AMC';
 
 export type InstallationStatus = 'NEW' | 'ASSIGNED' | 'COMPLETED' | 'CLOSED';
 

@@ -202,12 +202,18 @@ export default function TicketDetailScreen() {
               )}
             </View>
             <View style={styles.metaEditRow}>
-              <Text style={styles.metaEditLabel}>Warranty</Text>
+              <Text style={styles.metaEditLabel}>
+                Warranty
+                {ticket.warranty_status === 'UNKNOWN' && (
+                  <Text style={{ color: colors.danger }}> *</Text>
+                )}
+              </Text>
               {canEditMeta ? (
                 <View style={{ flex: 1 }}>
                   <Select
                     value={ticket.warranty_status}
                     sheetTitle="Warranty status"
+                    placeholder="Select warranty status…"
                     options={toOptions(WARRANTY_STATUSES).map((o) => ({
                       ...o,
                       label: prettyEnum(o.value),
@@ -223,6 +229,8 @@ export default function TicketDetailScreen() {
                     }}
                   />
                 </View>
+              ) : ticket.warranty_status === 'UNKNOWN' ? (
+                <Text style={styles.metaEditLabel}>Not set</Text>
               ) : (
                 <Badge
                   label={prettyEnum(ticket.warranty_status)}

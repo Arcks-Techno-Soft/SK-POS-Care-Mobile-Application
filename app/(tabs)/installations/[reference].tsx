@@ -301,6 +301,44 @@ function WorkflowSection({
     }
   };
 
+  const handleReassign = () => {
+    if (!selectedEngineerId) {
+      Alert.alert('Re-assign', 'Please select an engineer first.');
+      return;
+    }
+    const target = (engineers ?? []).find(
+      (e) => String(e.id) === selectedEngineerId,
+    );
+    Alert.alert(
+      'Re-assign installation',
+      `Re-assign to ${target?.name ?? 'the selected engineer'}? ` +
+        `${installation.assigned_engineer?.name ?? 'The current engineer'} will no longer be assigned.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Re-assign',
+          onPress: async () => {
+            setBanner(null);
+            setAssigning(true);
+            try {
+              await api.assignInstallation(
+                installation.reference,
+                Number(selectedEngineerId),
+              );
+              setSelectedEngineerId(null);
+              onReload();
+            } catch (e) {
+              const msg = e instanceof ApiError ? e.message : (e as Error).message;
+              setBanner(msg);
+            } finally {
+              setAssigning(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleSelfAssign = async () => {
     setBanner(null);
     setSelfAssigning(true);
@@ -378,6 +416,33 @@ function WorkflowSection({
             onPress={handleComplete}
             loading={completing}
           />
+
+          {/* Not completed yet — a manager/admin can re-assign to another engineer. */}
+          {canManage && (
+            <View style={styles.reassignBlock}>
+              <Text style={styles.reassignHint}>
+                Re-assign this installation to a different engineer if needed.
+              </Text>
+              <Select
+                label="Re-assign to engineer"
+                value={selectedEngineerId}
+                onChange={setSelectedEngineerId}
+                options={engineerOptions.filter(
+                  (o) => o.value !== String(installation.assigned_engineer?.id),
+                )}
+                placeholder="Select engineer…"
+                sheetTitle="Select Engineer"
+              />
+              <Button
+                title="Re-assign"
+                icon="swap-horizontal-outline"
+                variant="secondary"
+                onPress={handleReassign}
+                loading={assigning}
+                disabled={!selectedEngineerId}
+              />
+            </View>
+          )}
         </View>
       )}
 
@@ -797,6 +862,14 @@ const styles = StyleSheet.create({
   invoiceBtnRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
 
   workflowBlock: { gap: spacing.sm },
+  reassignBlock: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  reassignHint: { fontSize: fontSize.sm, color: colors.inkSubtle, lineHeight: 20 },
   workflowNote: {
     fontSize: fontSize.sm,
     color: colors.inkMuted,
