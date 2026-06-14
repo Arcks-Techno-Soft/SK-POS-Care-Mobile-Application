@@ -565,6 +565,15 @@ export class Api {
     return this.request('POST', `/admin/installations/${reference}/close`);
   }
 
+  updateInstallationInvoice(
+    reference: string,
+    invoiceNumber: string,
+  ): Promise<InstallationDetail> {
+    return this.request('PATCH', `/admin/installations/${reference}/invoice`, {
+      json: { invoice_number: invoiceNumber },
+    });
+  }
+
   signInstallationCustomer(
     reference: string,
     signerName: string,
