@@ -57,6 +57,12 @@ export default function InstallationDetailScreen() {
   };
 
   const canManage = user?.role === 'MANAGER' || user?.role === 'OWNER';
+  // Invoice is editable by the assignee / Owner / Manager, but only until the
+  // installation is CLOSED (after which it's frozen into the signed PDF).
+  const canEditInvoice =
+    !!installation &&
+    installation.status !== 'CLOSED' &&
+    (canManage || installation.assigned_engineer?.id === user?.id);
 
   return (
     <View style={styles.root}>
@@ -124,7 +130,12 @@ export default function InstallationDetailScreen() {
               </>
             ) : null}
             <Divider />
-            <KeyValue label="Invoice Number" value={installation.invoice_number} mono />
+            <InvoiceRow
+              installation={installation}
+              canEdit={canEditInvoice}
+              api={api}
+              onReload={reloadAndBadge}
+            />
           </Section>
 
           {/* 4. Work Notes */}
@@ -139,6 +150,105 @@ export default function InstallationDetailScreen() {
           <ActivitySection reference={reference} api={api} />
         </KeyboardAwareScrollView>
       ) : null}
+    </View>
+  );
+}
+
+/* ─── Invoice (editable) ─── */
+
+// Mirrors the mobile new-installation form: the value stored when no invoice
+// number is available yet.
+const INVOICE_DEFERRED = 'To be added later';
+
+function InvoiceRow({
+  installation,
+  canEdit,
+  api,
+  onReload,
+}: {
+  installation: InstallationDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(installation.invoice_number);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const next = value.trim();
+    if (!next) {
+      Alert.alert('Invoice', 'Enter an invoice number, or use “To be added later”.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.updateInstallationInvoice(installation.reference, next);
+      setEditing(false);
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Invoice',
+        e instanceof ApiError ? e.message : 'Could not update the invoice number.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <KeyValue
+        label="Invoice Number"
+        value={
+          <View style={styles.invoiceValueRow}>
+            <Text style={styles.invoiceValue}>{installation.invoice_number}</Text>
+            {canEdit && (
+              <Pressable
+                onPress={() => {
+                  setValue(installation.invoice_number);
+                  setEditing(true);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.invoiceEdit}>Edit</Text>
+              </Pressable>
+            )}
+          </View>
+        }
+      />
+    );
+  }
+
+  return (
+    <View style={styles.invoiceEditBox}>
+      <Text style={styles.invoiceEditLabel}>Invoice Number</Text>
+      <Field
+        value={value}
+        onChangeText={setValue}
+        placeholder="Invoice number"
+        autoCapitalize="characters"
+        autoFocus
+      />
+      <Pressable onPress={() => setValue(INVOICE_DEFERRED)} hitSlop={8}>
+        <Text style={styles.invoiceEdit}>Set “{INVOICE_DEFERRED}”</Text>
+      </Pressable>
+      <View style={styles.invoiceBtnRow}>
+        <Button
+          title="Cancel"
+          variant="secondary"
+          size="sm"
+          fullWidth={false}
+          onPress={() => setEditing(false)}
+        />
+        <Button
+          title="Save"
+          size="sm"
+          fullWidth={false}
+          loading={saving}
+          onPress={save}
+        />
+      </View>
     </View>
   );
 }
@@ -678,6 +788,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'right',
   },
+
+  invoiceValueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md },
+  invoiceValue: { fontSize: fontSize.sm, color: colors.ink, fontFamily: 'monospace', textAlign: 'right', flexShrink: 1 },
+  invoiceEdit: { fontSize: fontSize.sm, color: colors.info, fontWeight: '500' },
+  invoiceEditBox: { paddingVertical: spacing.sm, gap: spacing.sm },
+  invoiceEditLabel: { fontSize: fontSize.sm, color: colors.inkSubtle, fontWeight: '500' },
+  invoiceBtnRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
 
   workflowBlock: { gap: spacing.sm },
   workflowNote: {
