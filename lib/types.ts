@@ -18,6 +18,8 @@ export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type WarrantyStatus = 'UNKNOWN' | 'UNDER_WARRANTY' | 'OUT_OF_WARRANTY' | 'AMC';
 
+export type ServiceType = 'SITE_VISIT' | 'REMOTE_SUPPORT';
+
 export type InstallationStatus = 'NEW' | 'ASSIGNED' | 'COMPLETED' | 'CLOSED';
 
 export interface User {
@@ -101,6 +103,7 @@ export interface TicketDetail {
   description?: string;
   status: TicketStatus;
   warranty_status: WarrantyStatus;
+  service_type: ServiceType;
   preferred_contact_time?: string | null;
   raised_by: User | null;
   acknowledged_by: User | null;
@@ -131,6 +134,7 @@ export interface TicketListItem {
   severity: Severity;
   status: TicketStatus;
   warranty_status: WarrantyStatus;
+  service_type: ServiceType;
   raised_by: User | null;
   assigned_engineer: User | null;
   created_at: string;

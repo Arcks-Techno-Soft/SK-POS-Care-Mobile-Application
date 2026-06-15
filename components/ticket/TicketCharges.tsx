@@ -55,9 +55,11 @@ export default function TicketCharges({ reference, ticket }: Props) {
 
   const charges = chargesQuery.data;
   const operable = ticketIsOperable(ticket.status);
+  // Remote-support tickets carry no spare parts — show only the service fee.
+  const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
 
   return (
-    <Section title="Spares & charges">
+    <Section title={isRemote ? 'Service charge' : 'Spares & charges'}>
       <View style={styles.body}>
         {chargesQuery.loading && !charges ? (
           <ActivityIndicator color={colors.inkMuted} style={{ marginVertical: spacing.md }} />
@@ -98,54 +100,59 @@ export default function TicketCharges({ reference, ticket }: Props) {
               </>
             )}
 
-            {/* Spare lines */}
-            {charges.items.length === 0 ? (
-              <Text style={styles.empty}>No spare parts added.</Text>
-            ) : (
-              charges.items.map((item, i) => (
-                <View key={item.id}>
-                  {i > 0 && <Divider style={{ marginVertical: spacing.sm }} />}
-                  <ChargeRow
-                    item={item}
-                    editable={operable}
-                    onEdit={() => setEditLine(item)}
-                    onRemove={() =>
-                      Alert.alert(
-                        'Remove spare',
-                        `Remove "${item.name}" from this ticket?`,
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Remove',
-                            style: 'destructive',
-                            onPress: async () => {
-                              try {
-                                await api.removeSpare(reference, item.id);
-                                chargesQuery.reload();
-                              } catch (e) {
-                                Alert.alert('Charges', errMsg(e));
-                              }
+            {/* Spare lines — not applicable to remote-support tickets. */}
+            {!isRemote &&
+              (charges.items.length === 0 ? (
+                <Text style={styles.empty}>No spare parts added.</Text>
+              ) : (
+                charges.items.map((item, i) => (
+                  <View key={item.id}>
+                    {i > 0 && <Divider style={{ marginVertical: spacing.sm }} />}
+                    <ChargeRow
+                      item={item}
+                      editable={operable}
+                      onEdit={() => setEditLine(item)}
+                      onRemove={() =>
+                        Alert.alert(
+                          'Remove spare',
+                          `Remove "${item.name}" from this ticket?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Remove',
+                              style: 'destructive',
+                              onPress: async () => {
+                                try {
+                                  await api.removeSpare(reference, item.id);
+                                  chargesQuery.reload();
+                                } catch (e) {
+                                  Alert.alert('Charges', errMsg(e));
+                                }
+                              },
                             },
-                          },
-                        ],
-                      )
-                    }
-                  />
-                </View>
-              ))
-            )}
+                          ],
+                        )
+                      }
+                    />
+                  </View>
+                ))
+              ))}
 
-            <Divider style={{ marginVertical: spacing.md }} />
+            {!isRemote && <Divider style={{ marginVertical: spacing.md }} />}
 
             {/* Totals */}
-            <TotalRow
-              label="Spares (list price)"
-              value={formatINR(charges.spares_list_price_total_inr)}
-            />
-            <TotalRow
-              label="Spares (billable)"
-              value={formatINR(charges.spares_billable_total_inr)}
-            />
+            {!isRemote && (
+              <>
+                <TotalRow
+                  label="Spares (list price)"
+                  value={formatINR(charges.spares_list_price_total_inr)}
+                />
+                <TotalRow
+                  label="Spares (billable)"
+                  value={formatINR(charges.spares_billable_total_inr)}
+                />
+              </>
+            )}
             <TotalRow
               label="Grand total"
               value={formatINR(charges.grand_total_inr)}
@@ -155,12 +162,17 @@ export default function TicketCharges({ reference, ticket }: Props) {
             {charges.is_warranty && (
               <View style={{ marginTop: spacing.sm }}>
                 <Banner
-                  message="Covered ticket (under warranty / AMC) — spares and service charge are waived (₹0)."
+                  message={
+                    isRemote
+                      ? 'Covered ticket (under warranty / AMC) — service charge waived (₹0).'
+                      : 'Covered ticket (under warranty / AMC) — spares and service charge are waived (₹0).'
+                  }
                   tone="info"
                 />
               </View>
             )}
 
+            {!isRemote && (
             <View style={{ marginTop: spacing.md }}>
               {operable ? (
                 <Button
@@ -173,6 +185,7 @@ export default function TicketCharges({ reference, ticket }: Props) {
                 <Text style={styles.hint}>{ticketLockReason(ticket.status)}</Text>
               )}
             </View>
+            )}
           </>
         ) : null}
       </View>

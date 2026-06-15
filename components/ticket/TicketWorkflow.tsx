@@ -49,6 +49,8 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   // Warranty must be decided before assigning. Mirrors the backend gate so the
   // user sees why the Assign buttons are disabled instead of hitting a 400.
   const warrantyUnknown = ticket.warranty_status === 'UNKNOWN';
+  // Remote support resolves and closes in one step — no signatures or PDF.
+  const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -282,7 +284,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
         {ticket.status === 'RESOLVING' &&
           (assignedToMe ? (
             <Button
-              title="Mark resolved"
+              title={isRemote ? 'Resolve & close' : 'Mark resolved'}
               icon="checkmark-done-outline"
               onPress={() => {
                 setSummary('');
@@ -349,9 +351,13 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
         <KeyboardAwareSheet>
         <Pressable style={styles.backdrop} onPress={() => setResolveOpen(false)}>
           <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle}>Mark resolved</Text>
+            <Text style={styles.sheetTitle}>
+              {isRemote ? 'Resolve & close' : 'Mark resolved'}
+            </Text>
             <Text style={styles.sheetHint}>
-              Summarise what was done to resolve this ticket.
+              {isRemote
+                ? 'Remote support — this resolves and closes the ticket immediately. No signatures or PDF.'
+                : 'Summarise what was done to resolve this ticket.'}
             </Text>
             <Field
               value={summary}
@@ -372,7 +378,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                 style={{ flex: 1 }}
               />
               <Button
-                title="Resolve ticket"
+                title={isRemote ? 'Resolve & close' : 'Resolve ticket'}
                 loading={resolving}
                 fullWidth={false}
                 onPress={submitResolve}

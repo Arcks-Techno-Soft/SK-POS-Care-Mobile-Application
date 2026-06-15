@@ -3,6 +3,7 @@
 import type {
   InstallationStatus,
   Role,
+  ServiceType,
   Severity,
   TicketStatus,
   WarrantyStatus,
@@ -35,6 +36,10 @@ export const WARRANTY_STATUSES: WarrantyStatus[] = [
   'OUT_OF_WARRANTY',
   'AMC',
 ];
+
+// How the ticket is serviced. SITE_VISIT is the default; REMOTE_SUPPORT skips
+// signatures, PDF and spare parts and closes in one Resolve & Close step.
+export const SERVICE_TYPES: ServiceType[] = ['SITE_VISIT', 'REMOTE_SUPPORT'];
 
 export const ASSIGNABLE_ROLES: Role[] = ['MANAGER', 'ENGINEER'];
 

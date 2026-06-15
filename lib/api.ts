@@ -313,6 +313,12 @@ export class Api {
     });
   }
 
+  setServiceType(reference: string, service_type: string): Promise<TicketDetail> {
+    return this.request('PATCH', `/admin/tickets/${reference}/service-type`, {
+      json: { service_type },
+    });
+  }
+
   signTicketCustomer(
     reference: string,
     signerName: string,

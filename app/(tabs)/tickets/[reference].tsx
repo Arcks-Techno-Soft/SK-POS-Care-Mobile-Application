@@ -27,7 +27,7 @@ import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
-import { prettyEnum, SEVERITIES, WARRANTY_STATUSES } from '@/lib/options';
+import { prettyEnum, SERVICE_TYPES, SEVERITIES, WARRANTY_STATUSES } from '@/lib/options';
 import {
   colors,
   fontSize,
@@ -54,6 +54,14 @@ export default function TicketDetailScreen() {
   } = useQuery<TicketDetail>(() => api.getTicket(reference), [reference]);
 
   const canEditMeta = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  // Remote-support tickets skip signatures, PDF, spare parts and shipments.
+  const isRemote = ticket?.service_type === 'REMOTE_SUPPORT';
+  // Service type can be set by Admin/Manager or the assigned engineer, until
+  // the ticket is resolved/closed.
+  const canEditServiceType =
+    (canEditMeta || (!!ticket && ticket.assigned_engineer?.id === user?.id)) &&
+    ticket?.status !== 'RESOLVED' &&
+    ticket?.status !== 'CLOSED';
 
   return (
     <View style={styles.root}>
@@ -238,6 +246,32 @@ export default function TicketDetailScreen() {
                 />
               )}
             </View>
+            <View style={styles.metaEditRow}>
+              <Text style={styles.metaEditLabel}>Service type</Text>
+              {canEditServiceType ? (
+                <View style={{ flex: 1 }}>
+                  <Select
+                    value={ticket.service_type}
+                    sheetTitle="Service type"
+                    options={toOptions(SERVICE_TYPES).map((o) => ({
+                      ...o,
+                      label: prettyEnum(o.value),
+                    }))}
+                    onChange={async (value) => {
+                      if (value === ticket.service_type) return;
+                      try {
+                        await api.setServiceType(reference, value);
+                        reload();
+                      } catch (e) {
+                        showError(e);
+                      }
+                    }}
+                  />
+                </View>
+              ) : (
+                <Badge label={prettyEnum(ticket.service_type)} tone="neutral" />
+              )}
+            </View>
           </Section>
 
           {/* Customer attachments */}
@@ -252,10 +286,13 @@ export default function TicketDetailScreen() {
           <TicketNotes reference={reference} ticket={ticket} reload={reload} />
           <TicketSubEngineers reference={reference} ticket={ticket} reload={reload} />
           <TicketCharges reference={reference} ticket={ticket} reload={reload} />
-          <TicketShipments reference={reference} ticket={ticket} reload={reload} />
-          {(ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
-            <TicketSignoff reference={reference} ticket={ticket} reload={reload} />
+          {!isRemote && (
+            <TicketShipments reference={reference} ticket={ticket} reload={reload} />
           )}
+          {!isRemote &&
+            (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED') && (
+              <TicketSignoff reference={reference} ticket={ticket} reload={reload} />
+            )}
           <TicketEvents reference={reference} ticket={ticket} reload={reload} />
         </KeyboardAwareScrollView>
       ) : null}
