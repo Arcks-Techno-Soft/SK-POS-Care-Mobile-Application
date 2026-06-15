@@ -251,6 +251,14 @@ export interface InstallationDetail {
   email: string | null;
   invoice_number: string;
   status: InstallationStatus;
+  address_line1: string | null;
+  address_line2: string | null;
+  address_line3: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  latitude: number | null;
+  longitude: number | null;
   created_by: User | null;
   assigned_by: User | null;
   assigned_engineer: User | null;

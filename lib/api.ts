@@ -533,9 +533,35 @@ export class Api {
     phone: string;
     email?: string;
     invoice_number: string;
+    address_line1: string;
+    address_line2?: string;
+    address_line3?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    latitude?: number;
+    longitude?: number;
     assigned_engineer_id?: number;
   }): Promise<InstallationDetail> {
     return this.request('POST', '/admin/installations', { json: body });
+  }
+
+  updateInstallationAddress(
+    reference: string,
+    body: {
+      address_line1: string;
+      address_line2?: string | null;
+      address_line3?: string | null;
+      city: string;
+      state: string;
+      pincode: string;
+      latitude?: number | null;
+      longitude?: number | null;
+    },
+  ): Promise<InstallationDetail> {
+    return this.request('PATCH', `/admin/installations/${reference}/address`, {
+      json: body,
+    });
   }
 
   installationEvents(reference: string): Promise<InstallationEvent[]> {

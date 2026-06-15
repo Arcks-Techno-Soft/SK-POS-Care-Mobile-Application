@@ -25,7 +25,7 @@ import { useApi, useAuth } from '@/lib/auth';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
-import { prettyEnum, roleLabel } from '@/lib/options';
+import { INDIAN_STATES, prettyEnum, roleLabel } from '@/lib/options';
 import { colors, fontSize, spacing, statusTone } from '@/lib/theme';
 import type {
   InstallationDetail,
@@ -131,6 +131,13 @@ export default function InstallationDetailScreen() {
             ) : null}
             <Divider />
             <InvoiceRow
+              installation={installation}
+              canEdit={canEditInvoice}
+              api={api}
+              onReload={reloadAndBadge}
+            />
+            <Divider />
+            <AddressRow
               installation={installation}
               canEdit={canEditInvoice}
               api={api}
@@ -250,6 +257,165 @@ function InvoiceRow({
         />
       </View>
     </View>
+  );
+}
+
+/* ─── Site address (editable) ─── */
+
+const PINCODE_RE = /^\d{4,10}$/;
+
+function AddressRow({
+  installation,
+  canEdit,
+  api,
+  onReload,
+}: {
+  installation: InstallationDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [line1, setLine1] = useState('');
+  const [line2, setLine2] = useState('');
+  const [line3, setLine3] = useState('');
+  const [city, setCity] = useState('');
+  const [stateName, setStateName] = useState<string | null>(null);
+  const [pincode, setPincode] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setLine1(installation.address_line1 ?? '');
+    setLine2(installation.address_line2 ?? '');
+    setLine3(installation.address_line3 ?? '');
+    setCity(installation.city ?? '');
+    setStateName(installation.state ?? null);
+    setPincode(installation.pincode ?? '');
+    setEditing(true);
+  };
+
+  const save = async () => {
+    if (line1.trim().length < 3) {
+      Alert.alert('Address', 'Address line 1 is required.');
+      return;
+    }
+    if (city.trim().length < 2) {
+      Alert.alert('Address', 'City is required.');
+      return;
+    }
+    if (!stateName) {
+      Alert.alert('Address', 'Select a state.');
+      return;
+    }
+    if (!PINCODE_RE.test(pincode.trim())) {
+      Alert.alert('Address', 'Enter a valid pincode (digits only).');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.updateInstallationAddress(installation.reference, {
+        address_line1: line1.trim(),
+        address_line2: line2.trim() || null,
+        address_line3: line3.trim() || null,
+        city: city.trim(),
+        state: stateName,
+        pincode: pincode.trim(),
+        // Preserve any pin previously dropped on the web.
+        latitude: installation.latitude,
+        longitude: installation.longitude,
+      });
+      setEditing(false);
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Address',
+        e instanceof ApiError ? e.message : 'Could not update the address.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <View style={styles.invoiceEditBox}>
+        <Text style={styles.invoiceEditLabel}>Site Address</Text>
+        <Field value={line1} onChangeText={setLine1} placeholder="Address line 1" />
+        <Field value={line2} onChangeText={setLine2} placeholder="Address line 2 (optional)" />
+        <Field value={line3} onChangeText={setLine3} placeholder="Address line 3 (optional)" />
+        <Field value={city} onChangeText={setCity} placeholder="City" autoCapitalize="words" />
+        <Select
+          value={stateName}
+          onChange={setStateName}
+          placeholder="Select state"
+          sheetTitle="State"
+          options={INDIAN_STATES.map((s) => ({ label: s, value: s }))}
+        />
+        <Field
+          value={pincode}
+          onChangeText={setPincode}
+          placeholder="Pincode"
+          keyboardType="number-pad"
+        />
+        <View style={styles.invoiceBtnRow}>
+          <Button
+            title="Cancel"
+            variant="secondary"
+            size="sm"
+            fullWidth={false}
+            onPress={() => setEditing(false)}
+          />
+          <Button title="Save" size="sm" fullWidth={false} loading={saving} onPress={save} />
+        </View>
+      </View>
+    );
+  }
+
+  const lines = [
+    installation.address_line1,
+    installation.address_line2,
+    installation.address_line3,
+    [installation.city, installation.state, installation.pincode].filter(Boolean).join(', '),
+  ].filter((l): l is string => !!l && l.trim().length > 0);
+
+  const hasGeo = installation.latitude != null && installation.longitude != null;
+
+  return (
+    <KeyValue
+      label="Site Address"
+      value={
+        <View style={styles.addressWrap}>
+          {lines.length ? (
+            lines.map((l, i) => (
+              <Text key={i} style={styles.addressLine}>
+                {l}
+              </Text>
+            ))
+          ) : (
+            <Text style={styles.docNone}>No address yet</Text>
+          )}
+          <View style={styles.addressActions}>
+            {hasGeo && (
+              <Pressable
+                onPress={() =>
+                  Linking.openURL(
+                    `https://www.google.com/maps/search/?api=1&query=${installation.latitude},${installation.longitude}`,
+                  )
+                }
+                hitSlop={8}
+              >
+                <Text style={styles.invoiceEdit}>Map</Text>
+              </Pressable>
+            )}
+            {canEdit && (
+              <Pressable onPress={start} hitSlop={8}>
+                <Text style={styles.invoiceEdit}>{lines.length ? 'Edit' : 'Add'}</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      }
+    />
   );
 }
 
@@ -860,6 +1026,11 @@ const styles = StyleSheet.create({
   invoiceEditBox: { paddingVertical: spacing.sm, gap: spacing.sm },
   invoiceEditLabel: { fontSize: fontSize.sm, color: colors.inkSubtle, fontWeight: '500' },
   invoiceBtnRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
+
+  addressWrap: { alignItems: 'flex-end', gap: spacing.xs, flexShrink: 1 },
+  addressLine: { fontSize: fontSize.sm, color: colors.ink, textAlign: 'right' },
+  addressActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
+  docNone: { fontSize: fontSize.sm, color: colors.inkSubtle },
 
   workflowBlock: { gap: spacing.sm },
   reassignBlock: {
