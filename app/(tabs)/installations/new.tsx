@@ -9,11 +9,13 @@ import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { useQuery } from '@/lib/hooks';
-import { BUSINESS_TYPES } from '@/lib/options';
+import { BUSINESS_TYPES, INDIAN_STATES } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
 import type { PickedDocument, User } from '@/lib/types';
 
 type InvoiceMode = 'later' | 'enter';
+
+const PINCODE_RE = /^\d{4,10}$/;
 
 // Stored as the invoice number when the user defers entering one. The backend
 // requires a non-empty string, so this sentinel keeps the field valid.
@@ -34,6 +36,12 @@ export default function NewInstallationScreen() {
   const [invoiceMode, setInvoiceMode] = useState<InvoiceMode>('later');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDoc, setInvoiceDoc] = useState<PickedDocument | null>(null);
+  const [addressLine1, setAddressLine1] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [addressLine3, setAddressLine3] = useState('');
+  const [city, setCity] = useState('');
+  const [stateName, setStateName] = useState<string | null>(null);
+  const [pincode, setPincode] = useState('');
   const [assignedEngineerId, setAssignedEngineerId] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,6 +68,10 @@ export default function NewInstallationScreen() {
     if (!phone.trim()) errs.phone = 'Phone number is required.';
     if (invoiceMode === 'enter' && !invoiceNumber.trim())
       errs.invoiceNumber = 'Enter the invoice number, or choose “To be added later”.';
+    if (addressLine1.trim().length < 3) errs.addressLine1 = 'Address line 1 is required.';
+    if (city.trim().length < 2) errs.city = 'City is required.';
+    if (!stateName) errs.state = 'Select a state.';
+    if (!PINCODE_RE.test(pincode.trim())) errs.pincode = 'Enter a valid pincode (digits only).';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -95,6 +107,12 @@ export default function NewInstallationScreen() {
         phone: string;
         email?: string;
         invoice_number: string;
+        address_line1: string;
+        address_line2?: string;
+        address_line3?: string;
+        city: string;
+        state: string;
+        pincode: string;
         assigned_engineer_id?: number;
       } = {
         business_name: businessName.trim(),
@@ -103,8 +121,14 @@ export default function NewInstallationScreen() {
         phone: phone.trim(),
         invoice_number:
           invoiceMode === 'later' ? INVOICE_DEFERRED : invoiceNumber.trim(),
+        address_line1: addressLine1.trim(),
+        city: city.trim(),
+        state: stateName!,
+        pincode: pincode.trim(),
       };
       if (email.trim()) body.email = email.trim();
+      if (addressLine2.trim()) body.address_line2 = addressLine2.trim();
+      if (addressLine3.trim()) body.address_line3 = addressLine3.trim();
       if (assignedEngineerId) body.assigned_engineer_id = Number(assignedEngineerId);
 
       const created = await api.createInstallation(body);
@@ -248,6 +272,63 @@ export default function NewInstallationScreen() {
           </Pressable>
         </View>
       )}
+
+      <Text style={styles.sectionLabel}>Site Address</Text>
+
+      <Field
+        label="Address line 1"
+        required
+        value={addressLine1}
+        onChangeText={setAddressLine1}
+        placeholder="Building name, floor, street"
+        error={errors.addressLine1}
+      />
+
+      <Field
+        label="Address line 2"
+        value={addressLine2}
+        onChangeText={setAddressLine2}
+        placeholder="Area, locality (optional)"
+      />
+
+      <Field
+        label="Address line 3"
+        value={addressLine3}
+        onChangeText={setAddressLine3}
+        placeholder="Landmark, additional info (optional)"
+      />
+
+      <Field
+        label="City"
+        required
+        value={city}
+        onChangeText={setCity}
+        placeholder="Bengaluru"
+        error={errors.city}
+        autoCapitalize="words"
+      />
+
+      <Select
+        label="State"
+        required
+        value={stateName}
+        onChange={setStateName}
+        placeholder="Select state"
+        sheetTitle="State"
+        options={INDIAN_STATES.map((s) => ({ label: s, value: s }))}
+      />
+      {!!errors.state && <Text style={styles.fieldError}>{errors.state}</Text>}
+
+      <Field
+        label="Pincode"
+        required
+        value={pincode}
+        onChangeText={setPincode}
+        placeholder="560001"
+        error={errors.pincode}
+        keyboardType="number-pad"
+        autoCapitalize="none"
+      />
 
       {!isEngineer && (
         <>
