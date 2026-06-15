@@ -65,32 +65,38 @@ export default function TicketCharges({ reference, ticket }: Props) {
           <Banner message={chargesQuery.error} />
         ) : charges ? (
           <>
-            {/* Service fee */}
-            <View style={styles.feeRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.lineName}>Service fee</Text>
-                {!charges.is_warranty && charges.service_fee_billable_inr !==
-                  charges.service_fee_inr && (
-                  <Text style={styles.meta}>
-                    Billable {formatINR(charges.service_fee_billable_inr)}
+            {/* Service fee is spared for covered tickets (under warranty /
+                AMC) — the row is hidden entirely. Out-of-warranty defaults
+                to ₹800 and is editable. */}
+            {!charges.is_warranty && (
+              <>
+                <View style={styles.feeRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.lineName}>Service fee</Text>
+                    {charges.service_fee_billable_inr !==
+                      charges.service_fee_inr && (
+                      <Text style={styles.meta}>
+                        Billable {formatINR(charges.service_fee_billable_inr)}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.lineTotal}>
+                    {formatINR(charges.service_fee_inr)}
                   </Text>
-                )}
-              </View>
-              <Text style={styles.lineTotal}>
-                {formatINR(charges.service_fee_inr)}
-              </Text>
-              {operable && (
-                <Pressable
-                  onPress={() => setFeeOpen(true)}
-                  hitSlop={8}
-                  style={styles.iconBtn}
-                >
-                  <Ionicons name="create-outline" size={18} color={colors.inkMuted} />
-                </Pressable>
-              )}
-            </View>
+                  {operable && (
+                    <Pressable
+                      onPress={() => setFeeOpen(true)}
+                      hitSlop={8}
+                      style={styles.iconBtn}
+                    >
+                      <Ionicons name="create-outline" size={18} color={colors.inkMuted} />
+                    </Pressable>
+                  )}
+                </View>
 
-            <Divider style={{ marginVertical: spacing.sm }} />
+                <Divider style={{ marginVertical: spacing.sm }} />
+              </>
+            )}
 
             {/* Spare lines */}
             {charges.items.length === 0 ? (
@@ -149,7 +155,7 @@ export default function TicketCharges({ reference, ticket }: Props) {
             {charges.is_warranty && (
               <View style={{ marginTop: spacing.sm }}>
                 <Banner
-                  message="Warranty ticket — spares are billed at ₹0."
+                  message="Covered ticket (under warranty / AMC) — spares and service charge are waived (₹0)."
                   tone="info"
                 />
               </View>
