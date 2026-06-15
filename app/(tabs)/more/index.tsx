@@ -3,8 +3,10 @@
  * and sign-out. Visible to all roles; workspace section is owner-only.
  */
 
+import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useState } from 'react';
 import {
   Alert,
@@ -64,7 +66,14 @@ export default function MoreScreen() {
   const [bioError, setBioError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState(serverUrl);
 
+  // Version line: marketing version + native build number identify the binary
+  // they installed; the OTA update id identifies the JS bundle they've pulled
+  // (so a stale bundle on the right binary is still distinguishable).
   const version = Constants.expoConfig?.version ?? '—';
+  const build = Application.nativeBuildVersion ?? '—';
+  const ota = Updates.isEmbeddedLaunch
+    ? 'no OTA'
+    : `update ${Updates.updateId?.slice(0, 7) ?? '—'}`;
 
   /* ---- server URL override (for staging/test backends) ---- */
   async function handleSaveServerUrl() {
@@ -204,7 +213,9 @@ export default function MoreScreen() {
       <Button title="Sign out" variant="danger" onPress={handleSignOut} />
 
       {/* ---- Footer ---- */}
-      <Text style={styles.footer}>SK-POS Support v{version} · OTA ✓</Text>
+      <Text style={styles.footer}>
+        SK-POS Support v{version} ({build}) · {ota}
+      </Text>
     </Screen>
   );
 }
