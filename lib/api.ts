@@ -16,6 +16,7 @@ import type {
   InstallationNote,
   Page,
   PdfLink,
+  PickedDocument,
   PickedImage,
   RosterContact,
   Shipment,
@@ -578,6 +579,25 @@ export class Api {
     return this.request('PATCH', `/admin/installations/${reference}/invoice`, {
       json: { invoice_number: invoiceNumber },
     });
+  }
+
+  uploadInstallationInvoiceDocument(
+    reference: string,
+    doc: PickedDocument,
+  ): Promise<InstallationDetail> {
+    const form = new FormData();
+    form.append('file', {
+      uri: doc.uri,
+      name: doc.name,
+      type: doc.type,
+    } as unknown as Blob);
+    return this.request('POST', `/admin/installations/${reference}/invoice-document`, {
+      form,
+    });
+  }
+
+  deleteInstallationInvoiceDocument(reference: string): Promise<InstallationDetail> {
+    return this.request('DELETE', `/admin/installations/${reference}/invoice-document`);
   }
 
   signInstallationCustomer(

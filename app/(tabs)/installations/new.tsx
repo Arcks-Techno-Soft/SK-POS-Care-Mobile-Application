@@ -1,6 +1,7 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/Screen';
 import { Banner, Button, Field } from '@/components/ui/kit';
@@ -10,7 +11,7 @@ import { useApi, useAuth } from '@/lib/auth';
 import { useQuery } from '@/lib/hooks';
 import { BUSINESS_TYPES } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
-import type { User } from '@/lib/types';
+import type { PickedDocument, User } from '@/lib/types';
 
 type InvoiceMode = 'later' | 'enter';
 
@@ -32,6 +33,7 @@ export default function NewInstallationScreen() {
   const [email, setEmail] = useState('');
   const [invoiceMode, setInvoiceMode] = useState<InvoiceMode>('later');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceDoc, setInvoiceDoc] = useState<PickedDocument | null>(null);
   const [assignedEngineerId, setAssignedEngineerId] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -62,6 +64,25 @@ export default function NewInstallationScreen() {
     return Object.keys(errs).length === 0;
   };
 
+  const pickInvoiceDoc = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      setInvoiceDoc({
+        uri: asset.uri,
+        name: asset.name ?? 'invoice',
+        type: asset.mimeType ?? 'application/octet-stream',
+      });
+    } catch {
+      Alert.alert('Invoice document', 'Could not open the document picker.');
+    }
+  };
+
   const handleSubmit = async () => {
     setBanner(null);
     if (!validate()) return;
@@ -87,6 +108,22 @@ export default function NewInstallationScreen() {
       if (assignedEngineerId) body.assigned_engineer_id = Number(assignedEngineerId);
 
       const created = await api.createInstallation(body);
+
+      // Optional invoice document. The installation already exists, so a failed
+      // upload must not block navigation — surface it and let the user retry
+      // from the installation screen (re-submitting would create a duplicate).
+      if (invoiceDoc) {
+        try {
+          await api.uploadInstallationInvoiceDocument(created.reference, invoiceDoc);
+        } catch (e) {
+          const msg = e instanceof ApiError ? e.message : 'upload failed';
+          Alert.alert(
+            'Invoice document',
+            `Installation ${created.reference} was created, but the document didn't upload: ${msg}. You can add it from the installation page.`,
+          );
+        }
+      }
+
       router.replace({
         pathname: '/(tabs)/installations/[reference]',
         params: { reference: created.reference },
@@ -195,6 +232,23 @@ export default function NewInstallationScreen() {
         />
       )}
 
+      <Text style={styles.docLabel}>Invoice Document (optional)</Text>
+      <Pressable onPress={pickInvoiceDoc} style={styles.docPicker}>
+        <Text style={invoiceDoc ? styles.docName : styles.docPlaceholder} numberOfLines={1}>
+          {invoiceDoc ? invoiceDoc.name : 'Attach a PDF or image…'}
+        </Text>
+      </Pressable>
+      {invoiceDoc && (
+        <View style={styles.docActions}>
+          <Pressable onPress={pickInvoiceDoc} hitSlop={8}>
+            <Text style={styles.docAction}>Replace</Text>
+          </Pressable>
+          <Pressable onPress={() => setInvoiceDoc(null)} hitSlop={8}>
+            <Text style={styles.docRemove}>Remove</Text>
+          </Pressable>
+        </View>
+      )}
+
       {!isEngineer && (
         <>
           <Text style={styles.sectionLabel}>Assignment (optional)</Text>
@@ -232,4 +286,24 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   fieldError: { fontSize: fontSize.xs, color: colors.danger, marginTop: -spacing.sm },
+  docLabel: {
+    fontSize: fontSize.sm,
+    color: colors.inkSubtle,
+    fontWeight: '500',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  docPicker: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 10,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  docPlaceholder: { fontSize: fontSize.sm, color: colors.inkSubtle },
+  docName: { fontSize: fontSize.sm, color: colors.ink },
+  docActions: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.xs },
+  docAction: { fontSize: fontSize.sm, color: colors.info, fontWeight: '500' },
+  docRemove: { fontSize: fontSize.sm, color: colors.danger, fontWeight: '500' },
 });

@@ -250,6 +250,7 @@ export interface InstallationDetail {
   phone: string;
   email: string | null;
   invoice_number: string;
+  invoice_document: InvoiceDocument | null;
   status: InstallationStatus;
   created_by: User | null;
   assigned_by: User | null;
@@ -259,6 +260,15 @@ export interface InstallationDetail {
   closed_at: string | null;
   created_at: string;
   resolution: InstallationResolutionDoc | null;
+}
+
+/** The optional uploaded invoice document (PDF or image). */
+export interface InvoiceDocument {
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  storage_url: string;
+  uploaded_at: string | null;
 }
 
 export interface InstallationListItem {
@@ -374,6 +384,13 @@ export interface BreakdownRow {
 
 /** A photo picked from camera/library, ready for multipart upload. */
 export interface PickedImage {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+/** A document (PDF/image) picked via the document picker, ready for upload. */
+export interface PickedDocument {
   uri: string;
   name: string;
   type: string;

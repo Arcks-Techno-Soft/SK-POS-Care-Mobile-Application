@@ -1,3 +1,4 @@
+import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -136,6 +137,13 @@ export default function InstallationDetailScreen() {
               api={api}
               onReload={reloadAndBadge}
             />
+            <Divider />
+            <InvoiceDocumentRow
+              installation={installation}
+              canEdit={canEditInvoice}
+              api={api}
+              onReload={reloadAndBadge}
+            />
           </Section>
 
           {/* 4. Work Notes */}
@@ -250,6 +258,106 @@ function InvoiceRow({
         />
       </View>
     </View>
+  );
+}
+
+/* ─── Invoice document (view / upload / replace / remove) ─── */
+
+function InvoiceDocumentRow({
+  installation,
+  canEdit,
+  api,
+  onReload,
+}: {
+  installation: InstallationDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const doc = installation.invoice_document;
+
+  const pickAndUpload = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      setBusy(true);
+      await api.uploadInstallationInvoiceDocument(installation.reference, {
+        uri: asset.uri,
+        name: asset.name ?? 'invoice',
+        type: asset.mimeType ?? 'application/octet-stream',
+      });
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Invoice document',
+        e instanceof ApiError ? e.message : 'Could not upload the document.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = () => {
+    Alert.alert('Invoice document', 'Remove the uploaded invoice document?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          try {
+            await api.deleteInstallationInvoiceDocument(installation.reference);
+            onReload();
+          } catch (e) {
+            Alert.alert(
+              'Invoice document',
+              e instanceof ApiError ? e.message : 'Could not remove the document.',
+            );
+          } finally {
+            setBusy(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  return (
+    <KeyValue
+      label="Invoice Document"
+      value={
+        <View style={styles.docValueWrap}>
+          {doc ? (
+            <Pressable onPress={() => WebBrowser.openBrowserAsync(doc.storage_url)}>
+              <Text style={styles.docLink} numberOfLines={1}>
+                📄 {doc.filename}
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.docNone}>No document</Text>
+          )}
+          {canEdit && (
+            <View style={styles.docActionsRow}>
+              <Pressable onPress={pickAndUpload} hitSlop={8} disabled={busy}>
+                <Text style={styles.invoiceEdit}>
+                  {busy ? 'Working…' : doc ? 'Replace' : 'Upload'}
+                </Text>
+              </Pressable>
+              {doc && !busy && (
+                <Pressable onPress={remove} hitSlop={8}>
+                  <Text style={styles.docRemove}>Remove</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+        </View>
+      }
+    />
   );
 }
 
@@ -857,6 +965,11 @@ const styles = StyleSheet.create({
   invoiceValueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md },
   invoiceValue: { fontSize: fontSize.sm, color: colors.ink, fontFamily: 'monospace', textAlign: 'right', flexShrink: 1 },
   invoiceEdit: { fontSize: fontSize.sm, color: colors.info, fontWeight: '500' },
+  docValueWrap: { alignItems: 'flex-end', gap: spacing.xs, flexShrink: 1 },
+  docLink: { fontSize: fontSize.sm, color: colors.info, textAlign: 'right' },
+  docNone: { fontSize: fontSize.sm, color: colors.inkSubtle },
+  docActionsRow: { flexDirection: 'row', gap: spacing.md },
+  docRemove: { fontSize: fontSize.sm, color: colors.danger, fontWeight: '500' },
   invoiceEditBox: { paddingVertical: spacing.sm, gap: spacing.sm },
   invoiceEditLabel: { fontSize: fontSize.sm, color: colors.inkSubtle, fontWeight: '500' },
   invoiceBtnRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
