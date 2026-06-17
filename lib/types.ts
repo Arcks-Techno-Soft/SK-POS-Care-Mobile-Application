@@ -53,6 +53,8 @@ export interface Attachment {
 export interface ResolutionDoc {
   customer_signer_name: string | null;
   customer_signed_at: string | null;
+  customer_photo_captured_at: string | null;
+  customer_photo_url: string | null;
   engineer_signed_at: string | null;
   engineer_signer_name: string | null;
   field_sign_link_generated_at: string | null;
@@ -237,6 +239,8 @@ export interface PdfLink {
 export interface InstallationResolutionDoc {
   customer_signer_name: string | null;
   customer_signed_at: string | null;
+  customer_photo_captured_at: string | null;
+  customer_photo_url: string | null;
   engineer_signed_at: string | null;
   pdf_generated_at: string | null;
 }

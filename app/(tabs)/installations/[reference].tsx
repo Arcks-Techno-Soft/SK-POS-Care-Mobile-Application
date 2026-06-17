@@ -23,6 +23,7 @@ import { Section } from '@/components/ui/Section';
 import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
+import { pickFromLibrary, takePhoto } from '@/lib/images';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
@@ -869,6 +870,7 @@ function SignoffSection({
   const [banner, setBanner] = useState<string | null>(null);
 
   const resolution = installation.resolution;
+  const photoCaptured = !!resolution?.customer_photo_captured_at;
 
   const handleStartCustomerSign = () => {
     setSignerNameInput('');
@@ -900,12 +902,13 @@ function SignoffSection({
     }
   };
 
-  const handleEngineerSignConfirm = async (fileUri: string) => {
-    setEngineerPadVisible(false);
+  // Submit the engineer signature (+ optional customer photo) — closes the
+  // installation and generates the PDF.
+  const submitEngineerSignature = async (fileUri: string, photo?: PickedImage) => {
     setBanner(null);
     setSigningEngineer(true);
     try {
-      await api.signInstallationEngineer(installation.reference, fileUri);
+      await api.signInstallationEngineer(installation.reference, fileUri, photo);
       onReload();
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : (e as Error).message;
@@ -913,6 +916,37 @@ function SignoffSection({
     } finally {
       setSigningEngineer(false);
     }
+  };
+
+  // After the engineer signs, prompt them to capture the customer's photo, then
+  // submit the signature + photo together. The photo is optional (Skip allowed).
+  const handleEngineerSignConfirm = (fileUri: string) => {
+    setEngineerPadVisible(false);
+    const pick = async (source: () => Promise<PickedImage[]>) => {
+      try {
+        const picked = await source();
+        if (!picked.length) {
+          handleEngineerSignConfirm(fileUri); // cancelled — re-prompt
+          return;
+        }
+        submitEngineerSignature(fileUri, picked[0]);
+      } catch (e) {
+        setBanner(e instanceof ApiError ? e.message : (e as Error).message);
+      }
+    };
+    Alert.alert(
+      'Add customer photo',
+      'Capture a photo of the customer for the installation record.',
+      [
+        { text: 'Take photo', onPress: () => pick(takePhoto) },
+        { text: 'Choose from library', onPress: () => pick(pickFromLibrary) },
+        {
+          text: 'Skip & finish',
+          style: 'cancel',
+          onPress: () => submitEngineerSignature(fileUri),
+        },
+      ],
+    );
   };
 
   const handleViewPdf = async () => {
@@ -971,6 +1005,25 @@ function SignoffSection({
           loading={signingEngineer}
           style={{ marginBottom: spacing.sm }}
         />
+      )}
+
+      <Divider style={{ marginVertical: spacing.md }} />
+
+      {/* Customer photo — captured during engineer sign-off (read-only here) */}
+      <Text style={styles.signoffLabel}>Customer Photo</Text>
+      {photoCaptured ? (
+        <Text style={styles.signedInfo}>
+          Captured · {formatDateTime(resolution?.customer_photo_captured_at)}
+        </Text>
+      ) : (
+        <Text style={[styles.signedInfo, { color: colors.inkSubtle, fontWeight: '400' }]}>
+          {resolution?.engineer_signed_at
+            ? 'No photo captured.'
+            : 'Captured when the engineer signs off.'}
+        </Text>
+      )}
+      {!!resolution?.customer_photo_url && (
+        <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
       )}
 
       <Divider style={{ marginVertical: spacing.md }} />
