@@ -47,6 +47,8 @@ export default function NewTicketScreen() {
   const [businessName, setBusinessName] = useState('');
   const [contactName, setContactName] = useState('');
   const [businessType, setBusinessType] = useState<string | null>(null);
+  // Free-text category, used only when businessType === 'Other'.
+  const [businessTypeOther, setBusinessTypeOther] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
 
@@ -80,6 +82,8 @@ export default function NewTicketScreen() {
     if (businessName.trim().length < 2) errs.businessName = 'Business name is required.';
     if (contactName.trim().length < 2) errs.contactName = 'Contact name is required.';
     if (!businessType) errs.businessType = 'Select a business type.';
+    else if (businessType === 'Other' && businessTypeOther.trim().length < 2)
+      errs.businessTypeOther = 'Please specify your business type.';
 
     if (!normaliseIndianMobile(phone)) errs.phone = 'Enter a valid 10-digit mobile number.';
 
@@ -112,7 +116,10 @@ export default function NewTicketScreen() {
         business_name: businessName.trim(),
         contact_name: contactName.trim(),
         phone: normaliseIndianMobile(phone) ?? phone.trim(),
-        business_type: businessType!,
+        business_type:
+          businessType === 'Other' && businessTypeOther.trim()
+            ? businessTypeOther.trim()
+            : businessType!,
         address_line1: addressLine1.trim(),
         city: city.trim(),
         state: stateName!,
@@ -208,6 +215,18 @@ export default function NewTicketScreen() {
         options={BUSINESS_TYPES.map((t) => ({ label: t, value: t }))}
       />
       {!!errors.businessType && <Text style={styles.fieldError}>{errors.businessType}</Text>}
+
+      {businessType === 'Other' && (
+        <Field
+          label="Specify business type"
+          required
+          value={businessTypeOther}
+          onChangeText={setBusinessTypeOther}
+          placeholder="Please specify your business type"
+          autoCapitalize="words"
+          error={errors.businessTypeOther}
+        />
+      )}
 
       <Field
         label="Phone"
