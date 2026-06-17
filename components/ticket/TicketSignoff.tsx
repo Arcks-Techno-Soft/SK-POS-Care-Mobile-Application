@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import { Image } from 'expo-image';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
@@ -47,7 +48,11 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
 
   // Customer photo is captured during the engineer sign-off step (the engineer
   // signature closes the ticket, so this is the last chance to attach it).
-  const photoCaptured = !!resolution?.customer_photo_captured_at;
+  const serverPhotoCaptured = !!resolution?.customer_photo_captured_at;
+
+  // The photo just picked on this device, shown as a preview immediately and
+  // kept around (even if the upload fails) so the engineer always sees it.
+  const [pendingPhoto, setPendingPhoto] = useState<PickedImage | null>(null);
 
   // Customer signature flow: name modal -> signature pad.
   const [nameModalOpen, setNameModalOpen] = useState(false);
@@ -103,6 +108,8 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
           promptCustomerPhoto(fileUri);
           return;
         }
+        // Show the preview right away, then upload.
+        setPendingPhoto(picked[0]);
         submitEngineerSignature(fileUri, picked[0]);
       } catch (e) {
         setError(errMsg(e));
@@ -256,9 +263,13 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
         <View style={styles.signRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Customer photo</Text>
-            {photoCaptured ? (
+            {serverPhotoCaptured ? (
               <Text style={styles.signedText}>
                 Captured · {formatDateTime(resolution?.customer_photo_captured_at)}
+              </Text>
+            ) : pendingPhoto ? (
+              <Text style={styles.signedText}>
+                {busy ? 'Uploading photo…' : 'Photo ready.'}
               </Text>
             ) : (
               <Text style={styles.pending}>
@@ -268,10 +279,18 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
               </Text>
             )}
           </View>
-          {photoCaptured && <Badge label="Added" tone="success" />}
+          {serverPhotoCaptured && <Badge label="Added" tone="success" />}
         </View>
-        {!!resolution?.customer_photo_url && (
-          <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+        {pendingPhoto ? (
+          <Image
+            source={{ uri: pendingPhoto.uri }}
+            style={styles.photoPreview}
+            contentFit="cover"
+          />
+        ) : (
+          !!resolution?.customer_photo_url && (
+            <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+          )
         )}
 
         <Divider style={{ marginVertical: spacing.sm }} />
@@ -407,6 +426,12 @@ const styles = StyleSheet.create({
   signRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   signedText: { fontSize: fontSize.xs, color: colors.inkSubtle, marginTop: 3 },
   pending: { fontSize: fontSize.xs, color: colors.inkSubtle, marginTop: 3 },
+  photoPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceSunken,
+  },
 
   linkBox: {
     backgroundColor: colors.surfaceSunken,

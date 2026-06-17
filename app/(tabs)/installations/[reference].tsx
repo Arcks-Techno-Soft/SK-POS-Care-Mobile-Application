@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
+import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -28,7 +29,7 @@ import { usePendingTickets } from '@/lib/pending-tickets';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
 import { INDIAN_STATES, prettyEnum, roleLabel } from '@/lib/options';
-import { colors, fontSize, spacing, statusTone } from '@/lib/theme';
+import { colors, fontSize, radius, spacing, statusTone } from '@/lib/theme';
 import type {
   InstallationDetail,
   InstallationEvent,
@@ -870,7 +871,11 @@ function SignoffSection({
   const [banner, setBanner] = useState<string | null>(null);
 
   const resolution = installation.resolution;
-  const photoCaptured = !!resolution?.customer_photo_captured_at;
+  const serverPhotoCaptured = !!resolution?.customer_photo_captured_at;
+
+  // The photo just picked on this device, shown as a preview immediately and
+  // kept around (even if the upload fails) so the engineer always sees it.
+  const [pendingPhoto, setPendingPhoto] = useState<PickedImage | null>(null);
 
   const handleStartCustomerSign = () => {
     setSignerNameInput('');
@@ -929,6 +934,8 @@ function SignoffSection({
           handleEngineerSignConfirm(fileUri); // cancelled — re-prompt
           return;
         }
+        // Show the preview right away, then upload.
+        setPendingPhoto(picked[0]);
         submitEngineerSignature(fileUri, picked[0]);
       } catch (e) {
         setBanner(e instanceof ApiError ? e.message : (e as Error).message);
@@ -1011,9 +1018,13 @@ function SignoffSection({
 
       {/* Customer photo — captured during engineer sign-off (read-only here) */}
       <Text style={styles.signoffLabel}>Customer Photo</Text>
-      {photoCaptured ? (
+      {serverPhotoCaptured ? (
         <Text style={styles.signedInfo}>
           Captured · {formatDateTime(resolution?.customer_photo_captured_at)}
+        </Text>
+      ) : pendingPhoto ? (
+        <Text style={styles.signedInfo}>
+          {signingEngineer ? 'Uploading photo…' : 'Photo ready.'}
         </Text>
       ) : (
         <Text style={[styles.signedInfo, { color: colors.inkSubtle, fontWeight: '400' }]}>
@@ -1022,8 +1033,16 @@ function SignoffSection({
             : 'Captured when the engineer signs off.'}
         </Text>
       )}
-      {!!resolution?.customer_photo_url && (
-        <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+      {pendingPhoto ? (
+        <Image
+          source={{ uri: pendingPhoto.uri }}
+          style={styles.photoPreview}
+          contentFit="cover"
+        />
+      ) : (
+        !!resolution?.customer_photo_url && (
+          <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+        )
       )}
 
       <Divider style={{ marginVertical: spacing.md }} />
@@ -1239,6 +1258,12 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: '500',
     marginBottom: spacing.sm,
+  },
+  photoPreview: {
+    width: 96,
+    height: 96,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceSunken,
   },
 
   modalBackdrop: {
