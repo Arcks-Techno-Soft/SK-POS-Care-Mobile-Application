@@ -13,7 +13,9 @@ import { colors, radius, spacing } from '@/lib/theme';
 export function useResolveUrl() {
   const { serverUrl } = useAuth();
   return (url: string) => {
-    if (/^https?:\/\//i.test(url)) return url;
+    // Already-absolute URIs (http(s)://, but also local file://, content://)
+    // are used as-is; only relative storage paths get the backend host.
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) return url;
     const base = normalizeBaseUrl(serverUrl);
     return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
   };

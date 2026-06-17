@@ -47,7 +47,11 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
 
   // Customer photo is captured during the engineer sign-off step (the engineer
   // signature closes the ticket, so this is the last chance to attach it).
-  const photoCaptured = !!resolution?.customer_photo_captured_at;
+  const serverPhotoCaptured = !!resolution?.customer_photo_captured_at;
+
+  // The photo just picked on this device, shown as a preview immediately and
+  // kept around (even if the upload fails) so the engineer always sees it.
+  const [pendingPhoto, setPendingPhoto] = useState<PickedImage | null>(null);
 
   // Customer signature flow: name modal -> signature pad.
   const [nameModalOpen, setNameModalOpen] = useState(false);
@@ -103,6 +107,8 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
           promptCustomerPhoto(fileUri);
           return;
         }
+        // Show the preview right away, then upload.
+        setPendingPhoto(picked[0]);
         submitEngineerSignature(fileUri, picked[0]);
       } catch (e) {
         setError(errMsg(e));
@@ -256,9 +262,13 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
         <View style={styles.signRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Customer photo</Text>
-            {photoCaptured ? (
+            {serverPhotoCaptured ? (
               <Text style={styles.signedText}>
                 Captured · {formatDateTime(resolution?.customer_photo_captured_at)}
+              </Text>
+            ) : pendingPhoto ? (
+              <Text style={styles.signedText}>
+                {busy ? 'Uploading photo…' : 'Photo ready.'}
               </Text>
             ) : (
               <Text style={styles.pending}>
@@ -268,10 +278,14 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
               </Text>
             )}
           </View>
-          {photoCaptured && <Badge label="Added" tone="success" />}
+          {serverPhotoCaptured && <Badge label="Added" tone="success" />}
         </View>
-        {!!resolution?.customer_photo_url && (
-          <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+        {pendingPhoto ? (
+          <AttachmentGallery urls={[pendingPhoto.uri]} size={96} />
+        ) : (
+          !!resolution?.customer_photo_url && (
+            <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+          )
         )}
 
         <Divider style={{ marginVertical: spacing.sm }} />
