@@ -1,6 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
-import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -29,7 +28,7 @@ import { usePendingTickets } from '@/lib/pending-tickets';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
 import { INDIAN_STATES, prettyEnum, roleLabel } from '@/lib/options';
-import { colors, fontSize, radius, spacing, statusTone } from '@/lib/theme';
+import { colors, fontSize, spacing, statusTone } from '@/lib/theme';
 import type {
   InstallationDetail,
   InstallationEvent,
@@ -1034,11 +1033,7 @@ function SignoffSection({
         </Text>
       )}
       {pendingPhoto ? (
-        <Image
-          source={{ uri: pendingPhoto.uri }}
-          style={styles.photoPreview}
-          contentFit="cover"
-        />
+        <AttachmentGallery urls={[pendingPhoto.uri]} size={96} />
       ) : (
         !!resolution?.customer_photo_url && (
           <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
@@ -1258,12 +1253,6 @@ const styles = StyleSheet.create({
     color: colors.success,
     fontWeight: '500',
     marginBottom: spacing.sm,
-  },
-  photoPreview: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceSunken,
   },
 
   modalBackdrop: {

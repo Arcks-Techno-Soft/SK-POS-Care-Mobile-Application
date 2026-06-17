@@ -11,7 +11,6 @@ import {
   View,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { Image } from 'expo-image';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
@@ -282,11 +281,7 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
           {serverPhotoCaptured && <Badge label="Added" tone="success" />}
         </View>
         {pendingPhoto ? (
-          <Image
-            source={{ uri: pendingPhoto.uri }}
-            style={styles.photoPreview}
-            contentFit="cover"
-          />
+          <AttachmentGallery urls={[pendingPhoto.uri]} size={96} />
         ) : (
           !!resolution?.customer_photo_url && (
             <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
@@ -426,12 +421,6 @@ const styles = StyleSheet.create({
   signRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   signedText: { fontSize: fontSize.xs, color: colors.inkSubtle, marginTop: 3 },
   pending: { fontSize: fontSize.xs, color: colors.inkSubtle, marginTop: 3 },
-  photoPreview: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceSunken,
-  },
 
   linkBox: {
     backgroundColor: colors.surfaceSunken,
