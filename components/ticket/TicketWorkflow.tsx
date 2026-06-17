@@ -37,6 +37,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const [loadingEngineers, setLoadingEngineers] = useState(false);
   const [engineersError, setEngineersError] = useState<string | null>(null);
   const [pickedEngineer, setPickedEngineer] = useState<string | null>(null);
+  const [pickedCoEngineer, setPickedCoEngineer] = useState<string | null>(null);
 
   const [resolveOpen, setResolveOpen] = useState(false);
   const [summary, setSummary] = useState('');
@@ -85,12 +86,54 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   useEffect(() => {
     if (
       ticket.status === 'ACKNOWLEDGED' ||
-      (ticket.status === 'ASSIGNED' && isManagerOrAdmin)
+      (ticket.status === 'ASSIGNED' && isManagerOrAdmin) ||
+      // Managers/admins also need the list to add co-assigned engineers once a
+      // primary engineer is on the ticket.
+      (isManagerOrAdmin && ticket.assigned_engineer != null)
     ) {
       loadEngineers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.status]);
+
+  // Co-assigned engineers: extra app users attending the same visit. View +
+  // notified only — only the primary assignee drives the workflow.
+  const coEngineers = ticket.additional_engineers ?? [];
+  const canManageCoEngineers =
+    isManagerOrAdmin &&
+    ticket.assigned_engineer != null &&
+    ticket.status !== 'CLOSED';
+  // Picker options exclude the primary assignee and anyone already co-assigned.
+  const coEngineerOptions = (engineers ?? [])
+    .filter(
+      (e) =>
+        e.id !== ticket.assigned_engineer?.id &&
+        !coEngineers.some((c) => c.engineer.id === e.id),
+    )
+    .map((e) => ({ label: e.name, value: String(e.id), sublabel: e.district ?? undefined }));
+
+  const addCoEngineer = () => {
+    if (!pickedCoEngineer) return;
+    run(async () => {
+      await api.addEngineer(reference, Number(pickedCoEngineer));
+      setPickedCoEngineer(null);
+    });
+  };
+
+  const removeCoEngineer = (engineerId: number, name: string) => {
+    Alert.alert(
+      'Remove engineer',
+      `Remove ${name} from this ticket? They'll no longer see it or get updates.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => run(() => api.removeEngineer(reference, engineerId)),
+        },
+      ],
+    );
+  };
 
   // Re-assign a still-unaccepted ticket to a different engineer. Reuses the
   // assign endpoint, which overwrites the current assignee server-side.
@@ -307,6 +350,63 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
           <Text style={styles.muted}>Ticket closed.</Text>
         )}
 
+        {/* Co-assigned engineers — extra app users on the same visit. Shown
+            once a primary engineer exists; managers/admins can add or remove. */}
+        {ticket.assigned_engineer != null &&
+          (coEngineers.length > 0 || canManageCoEngineers) && (
+            <View style={styles.coEng}>
+              <Text style={styles.coEngTitle}>Co-assigned engineers</Text>
+              {coEngineers.length === 0 ? (
+                <Text style={styles.muted}>
+                  None yet. Add another engineer if two need to attend this visit.
+                </Text>
+              ) : (
+                coEngineers.map((c) => (
+                  <View key={c.id} style={styles.coEngRow}>
+                    <View style={styles.coEngInfo}>
+                      <Text style={styles.coEngName}>{c.engineer.name}</Text>
+                      {c.engineer.district && (
+                        <Text style={styles.muted}>{c.engineer.district}</Text>
+                      )}
+                    </View>
+                    {canManageCoEngineers && (
+                      <Pressable
+                        disabled={busy}
+                        onPress={() => removeCoEngineer(c.engineer.id, c.engineer.name)}
+                        hitSlop={8}
+                      >
+                        <Text style={styles.coEngRemove}>Remove</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ))
+              )}
+
+              {canManageCoEngineers && (
+                <>
+                  <Select
+                    label="Add another engineer"
+                    value={pickedCoEngineer}
+                    placeholder={
+                      loadingEngineers ? 'Loading engineers…' : 'Select an engineer…'
+                    }
+                    sheetTitle="Engineers"
+                    options={coEngineerOptions}
+                    onChange={setPickedCoEngineer}
+                  />
+                  <Button
+                    title="Add engineer"
+                    icon="person-add-outline"
+                    variant="secondary"
+                    loading={busy}
+                    disabled={!pickedCoEngineer}
+                    onPress={addCoEngineer}
+                  />
+                </>
+              )}
+            </View>
+          )}
+
         {/* Actor / timestamp trail */}
         <View style={styles.trail}>
           {ticket.acknowledged_at && (
@@ -413,6 +513,23 @@ const styles = StyleSheet.create({
     borderTopColor: colors.line,
   },
   reassignHint: { fontSize: fontSize.sm, color: colors.inkSubtle, lineHeight: 20 },
+  coEng: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  coEngTitle: { fontSize: fontSize.sm, fontWeight: '700', color: colors.ink },
+  coEngRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  coEngInfo: { flex: 1 },
+  coEngName: { fontSize: fontSize.sm, fontWeight: '600', color: colors.ink },
+  coEngRemove: { fontSize: fontSize.sm, color: colors.danger, fontWeight: '600' },
   trail: { gap: 4, marginTop: spacing.xs },
   trailLine: { fontSize: fontSize.xs, color: colors.inkSubtle },
 

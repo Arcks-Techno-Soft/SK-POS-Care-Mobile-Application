@@ -288,6 +288,18 @@ export class Api {
     return this.request('POST', `/admin/tickets/${reference}/self-assign`);
   }
 
+  /** Add a co-assigned engineer (extra app user) to the same visit. */
+  addEngineer(reference: string, engineerId: number): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/engineers`, {
+      json: { engineer_id: engineerId },
+    });
+  }
+
+  /** Remove a co-assigned engineer from the ticket. */
+  removeEngineer(reference: string, engineerId: number): Promise<TicketDetail> {
+    return this.request('DELETE', `/admin/tickets/${reference}/engineers/${engineerId}`);
+  }
+
   acceptTicket(reference: string): Promise<TicketDetail> {
     return this.request('POST', `/admin/tickets/${reference}/accept`);
   }
