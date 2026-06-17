@@ -79,6 +79,23 @@ export interface AdditionalEngineer {
   added_at: string;
 }
 
+/** Summary + pending checklist for the force-close confirmation. */
+export interface ClosePreview {
+  reference: string;
+  business_name: string;
+  status: TicketStatus;
+  warranty_status: WarrantyStatus;
+  service_type: ServiceType;
+  assigned_engineer: User | null;
+  additional_engineers: AdditionalEngineer[];
+  acknowledged_at: string | null;
+  assigned_at: string | null;
+  accepted_at: string | null;
+  resolving_started_at: string | null;
+  resolved_at: string | null;
+  pending: string[];
+}
+
 export interface RosterContact {
   id: number;
   name: string;

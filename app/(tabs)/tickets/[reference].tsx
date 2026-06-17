@@ -1,6 +1,6 @@
 /** Ticket detail screen — header, workflow, and all sub-resource sections. */
 
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
   Linking,
@@ -20,6 +20,7 @@ import TicketShipments from '@/components/ticket/TicketShipments';
 import TicketSignoff from '@/components/ticket/TicketSignoff';
 import TicketSubEngineers from '@/components/ticket/TicketSubEngineers';
 import TicketWorkflow from '@/components/ticket/TicketWorkflow';
+import AdminTicketActions from '@/components/ticket/AdminTicketActions';
 import { Badge, Button, Card, KeyValue } from '@/components/ui/kit';
 import { Section } from '@/components/ui/Section';
 import { Select, toOptions } from '@/components/ui/Select';
@@ -40,8 +41,10 @@ import type { TicketDetail } from '@/lib/types';
 
 export default function TicketDetailScreen() {
   const { reference } = useLocalSearchParams<{ reference: string }>();
+  const router = useRouter();
   const api = useApi();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN'; // OWNER is normalized to ADMIN at login
 
   const {
     data: ticket,
@@ -294,6 +297,17 @@ export default function TicketDetailScreen() {
               <TicketSignoff reference={reference} ticket={ticket} reload={reload} />
             )}
           <TicketEvents reference={reference} ticket={ticket} reload={reload} />
+
+          {isAdmin && (
+            <Section title="Owner / Admin controls">
+              <AdminTicketActions
+                reference={reference}
+                status={ticket.status}
+                onChanged={reload}
+                onDeleted={() => router.back()}
+              />
+            </Section>
+          )}
         </KeyboardAwareScrollView>
       ) : null}
     </View>
