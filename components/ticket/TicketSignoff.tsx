@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import {
+  Alert,
   Modal,
   Pressable,
   Share,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
+import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
 import { SignaturePad } from '@/components/SignaturePad';
 import { Section } from '@/components/ui/Section';
@@ -18,8 +20,9 @@ import { Badge, Banner, Button, Divider, Field } from '@/components/ui/kit';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
+import { pickFromLibrary, takePhoto } from '@/lib/images';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
-import type { TicketDetail } from '@/lib/types';
+import type { PickedImage, TicketDetail } from '@/lib/types';
 
 interface Props {
   reference: string;
@@ -41,6 +44,10 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
   const resolution = ticket.resolution;
   const customerSigned = !!resolution?.customer_signed_at;
   const engineerSigned = !!resolution?.engineer_signed_at;
+
+  // Customer photo is captured during the engineer sign-off step (the engineer
+  // signature closes the ticket, so this is the last chance to attach it).
+  const photoCaptured = !!resolution?.customer_photo_captured_at;
 
   // Customer signature flow: name modal -> signature pad.
   const [nameModalOpen, setNameModalOpen] = useState(false);
@@ -69,18 +76,51 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
     }
   };
 
-  const submitEngineerSignature = async (fileUri: string) => {
-    setEngineerPadOpen(false);
+  // Submit the engineer signature (+ optional customer photo) — this closes
+  // the ticket and generates the PDF.
+  const submitEngineerSignature = async (fileUri: string, photo?: PickedImage) => {
     setBusy(true);
     setError(null);
     try {
-      await api.signTicketEngineer(reference, fileUri);
+      await api.signTicketEngineer(reference, fileUri, photo);
       reload();
     } catch (e) {
       setError(errMsg(e));
     } finally {
       setBusy(false);
     }
+  };
+
+  // After the engineer signs, prompt them to capture the customer's photo, then
+  // submit the signature + photo together. The photo is optional (Skip allowed).
+  const promptCustomerPhoto = (fileUri: string) => {
+    setEngineerPadOpen(false);
+    const pick = async (source: () => Promise<PickedImage[]>) => {
+      try {
+        const picked = await source();
+        if (!picked.length) {
+          // Picker cancelled — re-show the prompt so it isn't silently dropped.
+          promptCustomerPhoto(fileUri);
+          return;
+        }
+        submitEngineerSignature(fileUri, picked[0]);
+      } catch (e) {
+        setError(errMsg(e));
+      }
+    };
+    Alert.alert(
+      'Add customer photo',
+      'Capture a photo of the customer for the resolution record.',
+      [
+        { text: 'Take photo', onPress: () => pick(takePhoto) },
+        { text: 'Choose from library', onPress: () => pick(pickFromLibrary) },
+        {
+          text: 'Skip & finish',
+          style: 'cancel',
+          onPress: () => submitEngineerSignature(fileUri),
+        },
+      ],
+    );
   };
 
   const generateLink = async () => {
@@ -212,6 +252,30 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
 
         <Divider style={{ marginVertical: spacing.sm }} />
 
+        {/* Customer photo — captured during engineer sign-off (read-only here) */}
+        <View style={styles.signRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>Customer photo</Text>
+            {photoCaptured ? (
+              <Text style={styles.signedText}>
+                Captured · {formatDateTime(resolution?.customer_photo_captured_at)}
+              </Text>
+            ) : (
+              <Text style={styles.pending}>
+                {engineerSigned
+                  ? 'No photo captured.'
+                  : 'Captured when the engineer signs off.'}
+              </Text>
+            )}
+          </View>
+          {photoCaptured && <Badge label="Added" tone="success" />}
+        </View>
+        {!!resolution?.customer_photo_url && (
+          <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+        )}
+
+        <Divider style={{ marginVertical: spacing.sm }} />
+
         {/* Field sign-off link */}
         <Button
           title="Generate field sign-off link"
@@ -318,13 +382,13 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
         onConfirm={submitCustomerSignature}
       />
 
-      {/* Engineer signature pad */}
+      {/* Engineer signature pad — after signing, prompt for the customer photo */}
       <SignaturePad
         visible={engineerPadOpen}
         title="Engineer signature"
         caption={user?.name ? `Signing as ${user.name}` : undefined}
         onCancel={() => setEngineerPadOpen(false)}
-        onConfirm={submitEngineerSignature}
+        onConfirm={promptCustomerPhoto}
       />
     </Section>
   );

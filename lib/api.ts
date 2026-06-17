@@ -347,13 +347,22 @@ export class Api {
     return this.request('POST', `/admin/tickets/${reference}/sign-customer`, { form });
   }
 
-  signTicketEngineer(reference: string, signatureUri: string): Promise<TicketDetail> {
+  /**
+   * Engineer countersign — closes the ticket. An optional customer photo,
+   * captured at this final step, is bundled in and embedded in the PDF.
+   */
+  signTicketEngineer(
+    reference: string,
+    signatureUri: string,
+    photo?: PickedImage,
+  ): Promise<TicketDetail> {
     const form = new FormData();
     form.append('signature', {
       uri: signatureUri,
       name: 'engineer-signature.png',
       type: 'image/png',
     } as unknown as Blob);
+    if (photo) this.appendImages(form, 'photo', [photo]);
     return this.request('POST', `/admin/tickets/${reference}/sign-engineer`, { form });
   }
 
@@ -655,9 +664,14 @@ export class Api {
     });
   }
 
+  /**
+   * Engineer countersign — closes the installation. An optional customer
+   * photo captured at this final step is bundled in and embedded in the PDF.
+   */
   signInstallationEngineer(
     reference: string,
     signatureUri: string,
+    photo?: PickedImage,
   ): Promise<InstallationDetail> {
     const form = new FormData();
     form.append('signature', {
@@ -665,6 +679,7 @@ export class Api {
       name: 'engineer-signature.png',
       type: 'image/png',
     } as unknown as Blob);
+    if (photo) this.appendImages(form, 'photo', [photo]);
     return this.request('POST', `/admin/installations/${reference}/sign-engineer`, {
       form,
     });
