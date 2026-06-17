@@ -69,6 +69,14 @@ export interface SubEngineer {
   created_by: User | null;
 }
 
+/** A co-assigned app user attending the same visit (view + notified only). */
+export interface AdditionalEngineer {
+  id: number;
+  engineer: User;
+  added_by: User | null;
+  added_at: string;
+}
+
 export interface RosterContact {
   id: number;
   name: string;
@@ -117,6 +125,7 @@ export interface TicketDetail {
   resolution_summary: string | null;
   resolution: ResolutionDoc | null;
   sub_engineers: SubEngineer[];
+  additional_engineers: AdditionalEngineer[];
   created_at: string;
   attachments: Attachment[];
 }
