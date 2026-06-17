@@ -9,6 +9,7 @@
 import type {
   Analytics,
   ChargesSummary,
+  ClosePreview,
   FieldSignLink,
   InstallationDetail,
   InstallationEvent,
@@ -302,6 +303,25 @@ export class Api {
 
   acceptTicket(reference: string): Promise<TicketDetail> {
     return this.request('POST', `/admin/tickets/${reference}/accept`);
+  }
+
+  /** Admin/Owner: summary + pending checklist shown before force-closing. */
+  closePreview(reference: string): Promise<ClosePreview> {
+    return this.request('GET', `/admin/tickets/${reference}/close-preview`);
+  }
+
+  /** Admin/Owner: close a ticket from any status (reason required). */
+  forceCloseTicket(reference: string, reason: string): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/force-close`, {
+      json: { reason },
+    });
+  }
+
+  /** Admin/Owner: soft-delete a ticket in any status. */
+  deleteTicket(reference: string, reason?: string): Promise<TicketDetail> {
+    return this.request('DELETE', `/admin/tickets/${reference}`, {
+      json: { reason: reason?.trim() || null },
+    });
   }
 
   startWork(reference: string): Promise<TicketDetail> {

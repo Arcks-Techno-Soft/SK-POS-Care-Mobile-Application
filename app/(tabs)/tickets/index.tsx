@@ -13,6 +13,9 @@ import {
 } from 'react-native';
 
 import { EmptyState, ErrorView } from '@/components/States';
+import AdminTicketActionModals, {
+  type AdminActionMode,
+} from '@/components/ticket/AdminTicketActionModals';
 import { Badge, Card, Chip, Field } from '@/components/ui/kit';
 import { Select, toOptions } from '@/components/ui/Select';
 import { useApi, useAuth } from '@/lib/auth';
@@ -35,6 +38,10 @@ export default function TicketsListScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isEngineer = user?.role === 'ENGINEER';
+  const isAdmin = user?.role === 'ADMIN'; // OWNER is normalized to ADMIN at login
+  // Quick close/delete (Admin/Owner) — actionRef is the row being acted on.
+  const [actionRef, setActionRef] = useState<string | null>(null);
+  const [actionMode, setActionMode] = useState<AdminActionMode>(null);
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounced(search);
@@ -166,6 +173,20 @@ export default function TicketsListScreen() {
                 params: { reference: item.reference },
               })
             }
+            admin={
+              isAdmin
+                ? {
+                    onClose: () => {
+                      setActionRef(item.reference);
+                      setActionMode('close');
+                    },
+                    onDelete: () => {
+                      setActionRef(item.reference);
+                      setActionMode('delete');
+                    },
+                  }
+                : undefined
+            }
           />
         )}
         ListHeaderComponent={header}
@@ -208,6 +229,22 @@ export default function TicketsListScreen() {
           ) : null
         }
       />
+
+      {isAdmin && actionRef && (
+        <AdminTicketActionModals
+          reference={actionRef}
+          mode={actionMode}
+          onClose={() => setActionMode(null)}
+          onChanged={() => {
+            setActionMode(null);
+            fetchPage(0, 'refresh');
+          }}
+          onDeleted={() => {
+            setActionMode(null);
+            fetchPage(0, 'refresh');
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -215,9 +252,11 @@ export default function TicketsListScreen() {
 function TicketCard({
   ticket,
   onPress,
+  admin,
 }: {
   ticket: TicketListItem;
   onPress: () => void;
+  admin?: { onClose: () => void; onDelete: () => void };
 }) {
   return (
     <Card onPress={onPress} style={styles.card}>
@@ -264,6 +303,19 @@ function TicketCard({
           </Text>
         )}
       </View>
+
+      {admin && (
+        <View style={styles.adminRow}>
+          {ticket.status !== 'CLOSED' && (
+            <Pressable hitSlop={6} onPress={admin.onClose}>
+              <Text style={styles.adminAction}>Close</Text>
+            </Pressable>
+          )}
+          <Pressable hitSlop={6} onPress={admin.onDelete}>
+            <Text style={styles.adminAction}>Delete</Text>
+          </Pressable>
+        </View>
+      )}
     </Card>
   );
 }
@@ -275,6 +327,16 @@ const styles = StyleSheet.create({
   chips: { gap: spacing.sm, paddingVertical: 2 },
   filterRow: { flexDirection: 'row', gap: spacing.sm },
   count: { fontSize: fontSize.xs, color: colors.inkSubtle, fontWeight: '600' },
+  adminRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  adminAction: { fontSize: fontSize.sm, fontWeight: '600', color: colors.danger },
   placeholder: { paddingTop: spacing.xxxl * 2 },
 
   card: { gap: 3 },
