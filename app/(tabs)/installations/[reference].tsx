@@ -131,6 +131,15 @@ export default function InstallationDetailScreen() {
                 <KeyValue label="Email" value={installation.email} />
               </>
             ) : null}
+            {installation.products_for_installation ? (
+              <>
+                <Divider />
+                <KeyValue
+                  label="Products"
+                  value={installation.products_for_installation}
+                />
+              </>
+            ) : null}
             <Divider />
             <InvoiceRow
               installation={installation}
