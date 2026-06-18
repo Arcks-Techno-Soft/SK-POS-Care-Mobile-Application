@@ -33,6 +33,7 @@ export default function NewInstallationScreen() {
   const [contactName, setContactName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [products, setProducts] = useState('');
   const [invoiceMode, setInvoiceMode] = useState<InvoiceMode>('later');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDoc, setInvoiceDoc] = useState<PickedDocument | null>(null);
@@ -68,6 +69,7 @@ export default function NewInstallationScreen() {
     if (!phone.trim()) errs.phone = 'Phone number is required.';
     if (invoiceMode === 'enter' && !invoiceNumber.trim())
       errs.invoiceNumber = 'Enter the invoice number, or choose “To be added later”.';
+    if (products.trim().length < 2) errs.products = 'List the products to be installed.';
     if (addressLine1.trim().length < 3) errs.addressLine1 = 'Address line 1 is required.';
     if (city.trim().length < 2) errs.city = 'City is required.';
     if (!stateName) errs.state = 'Select a state.';
@@ -107,6 +109,7 @@ export default function NewInstallationScreen() {
         phone: string;
         email?: string;
         invoice_number: string;
+        products_for_installation: string;
         address_line1: string;
         address_line2?: string;
         address_line3?: string;
@@ -121,6 +124,7 @@ export default function NewInstallationScreen() {
         phone: phone.trim(),
         invoice_number:
           invoiceMode === 'later' ? INVOICE_DEFERRED : invoiceNumber.trim(),
+        products_for_installation: products.trim(),
         address_line1: addressLine1.trim(),
         city: city.trim(),
         state: stateName!,
@@ -222,6 +226,18 @@ export default function NewInstallationScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
+      />
+
+      <Field
+        label="Products for Installation"
+        required
+        value={products}
+        onChangeText={setProducts}
+        placeholder={'One product per line — name and quantity\ne.g. POS Machine x 2'}
+        error={errors.products}
+        multiline
+        numberOfLines={4}
+        autoCapitalize="words"
       />
 
       <Text style={styles.sectionLabel}>Invoice</Text>

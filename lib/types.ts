@@ -280,6 +280,7 @@ export interface InstallationDetail {
   phone: string;
   email: string | null;
   invoice_number: string;
+  products_for_installation: string | null;
   invoice_document: InvoiceDocument | null;
   status: InstallationStatus;
   address_line1: string | null;
