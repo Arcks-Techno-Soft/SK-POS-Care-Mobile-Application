@@ -15,6 +15,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
+import { AttemptsSection } from '@/components/AttemptsSection';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { SignaturePad } from '@/components/SignaturePad';
 import { ErrorView, Loading } from '@/components/States';
@@ -32,7 +33,6 @@ import { colors, fontSize, spacing, statusTone } from '@/lib/theme';
 import type {
   InstallationDetail,
   InstallationEvent,
-  InstallationNote,
   PickedImage,
   User,
 } from '@/lib/types';
@@ -163,8 +163,30 @@ export default function InstallationDetailScreen() {
             />
           </Section>
 
-          {/* 4. Work Notes */}
-          <NotesSection reference={reference} api={api} />
+          {/* 4. Work attempts (notes + photos grouped per visit) */}
+          <AttemptsSection
+            attempts={installation.attempts}
+            canWork={
+              installation.status === 'ASSIGNED' &&
+              (canManage || installation.assigned_engineer?.id === user?.id)
+            }
+            canStart={
+              installation.status === 'ASSIGNED' &&
+              (canManage || installation.assigned_engineer?.id === user?.id)
+            }
+            onStartAttempt={async () => {
+              await api.startInstallationAttempt(reference);
+              reloadAndBadge();
+            }}
+            onEndAttempt={async (attemptId) => {
+              await api.endInstallationAttempt(reference, attemptId);
+              reloadAndBadge();
+            }}
+            onAddNote={async (body, images) => {
+              await api.addInstallationNote(reference, body, images);
+              reloadAndBadge();
+            }}
+          />
 
           {/* 5. Sign-off (COMPLETED or CLOSED) */}
           {(installation.status === 'COMPLETED' || installation.status === 'CLOSED') && (
@@ -556,6 +578,11 @@ function WorkflowSection({
   const [completing, setCompleting] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
+  // Finishing requires at least one completed attempt and none still open.
+  const openAttempt = installation.attempts.find((a) => !a.ended_at) ?? null;
+  const endedAttempts = installation.attempts.filter((a) => a.ended_at).length;
+  const canFinish = !openAttempt && endedAttempts > 0;
+
   const { data: engineers } = useQuery<User[]>(
     () => api.listEngineers(),
     [],
@@ -638,7 +665,7 @@ function WorkflowSection({
   };
 
   const handleComplete = async () => {
-    Alert.alert('Mark Completed', 'Confirm that the installation is complete?', [
+    Alert.alert('Finish installation', 'Confirm that the installation is complete? You’ll capture the customer signature next.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Confirm',
@@ -694,12 +721,20 @@ function WorkflowSection({
 
       {installation.status === 'ASSIGNED' && (
         <View style={styles.workflowBlock}>
-          <Button
-            title="Mark Completed"
-            icon="checkmark-circle-outline"
-            onPress={handleComplete}
-            loading={completing}
-          />
+          {canFinish ? (
+            <Button
+              title="Finish installation"
+              icon="checkmark-circle-outline"
+              onPress={handleComplete}
+              loading={completing}
+            />
+          ) : (
+            <Text style={styles.workflowNote}>
+              {openAttempt
+                ? 'End the open attempt below before finishing.'
+                : 'Start and end at least one attempt below before finishing.'}
+            </Text>
+          )}
 
           {/* Not completed yet — a manager/admin can re-assign to another engineer. */}
           {canManage && (
@@ -760,99 +795,6 @@ function WorkflowSection({
           <Text style={styles.tsRow}>Closed {formatDateTime(installation.closed_at)}</Text>
         )}
       </View>
-    </Section>
-  );
-}
-
-/* ─── Notes ─── */
-
-function NotesSection({
-  reference,
-  api,
-}: {
-  reference: string;
-  api: ReturnType<typeof useApi>;
-}) {
-  const {
-    data: notes,
-    loading,
-    reload: reloadNotes,
-  } = useQuery<InstallationNote[]>(() => api.installationNotes(reference), [reference]);
-
-  const [body, setBody] = useState('');
-  const [images, setImages] = useState<PickedImage[]>([]);
-  const [adding, setAdding] = useState(false);
-  const [noteBanner, setNoteBanner] = useState<string | null>(null);
-
-  const handleAddNote = async () => {
-    if (!body.trim() && images.length === 0) {
-      Alert.alert('Note', 'Please enter a note or attach a photo.');
-      return;
-    }
-    setNoteBanner(null);
-    setAdding(true);
-    try {
-      await api.addInstallationNote(reference, body.trim(), images);
-      setBody('');
-      setImages([]);
-      reloadNotes();
-    } catch (e) {
-      const msg = e instanceof ApiError ? e.message : (e as Error).message;
-      setNoteBanner(msg);
-    } finally {
-      setAdding(false);
-    }
-  };
-
-  return (
-    <Section title="Work Notes">
-      {loading && (
-        <Text style={styles.dimText}>Loading notes…</Text>
-      )}
-
-      {!loading && (!notes || notes.length === 0) && (
-        <Text style={styles.dimText}>No notes yet.</Text>
-      )}
-
-      {(notes ?? []).map((note, idx) => (
-        <View key={note.id}>
-          {idx > 0 && <Divider style={{ marginVertical: spacing.sm }} />}
-          <View style={styles.noteHeader}>
-            <Text style={styles.noteAuthor}>
-              {note.author.name}{' '}
-              <Text style={styles.noteRole}>· {roleLabel(note.author.role)}</Text>
-            </Text>
-            <Text style={styles.noteTime}>{timeAgo(note.created_at)}</Text>
-          </View>
-          <Text style={styles.noteBody}>{note.body}</Text>
-          {note.attachments.length > 0 && (
-            <View style={{ marginTop: spacing.sm }}>
-              <AttachmentGallery urls={note.attachments.map((a) => a.storage_url)} />
-            </View>
-          )}
-        </View>
-      ))}
-
-      <Divider style={{ marginTop: spacing.md, marginBottom: spacing.md }} />
-
-      {noteBanner && <Banner message={noteBanner} tone="danger" />}
-
-      <Field
-        label="Add note"
-        value={body}
-        onChangeText={setBody}
-        placeholder="Describe the work done…"
-        multiline
-      />
-      <PhotoPicker images={images} onChange={setImages} />
-      <Button
-        title="Add Note"
-        variant="secondary"
-        icon="chatbubble-outline"
-        onPress={handleAddNote}
-        loading={adding}
-        style={{ marginTop: spacing.xs }}
-      />
     </Section>
   );
 }

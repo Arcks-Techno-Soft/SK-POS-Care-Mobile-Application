@@ -145,8 +145,19 @@ export interface TicketDetail {
   resolution: ResolutionDoc | null;
   sub_engineers: SubEngineer[];
   additional_engineers: AdditionalEngineer[];
+  attempts: TicketAttempt[];
   created_at: string;
   attachments: Attachment[];
+}
+
+/** One work attempt (visit) with its notes + photos. */
+export interface TicketAttempt {
+  id: number;
+  attempt_number: number;
+  started_at: string;
+  ended_at: string | null;
+  started_by: User | null;
+  notes: WorkNote[];
 }
 
 /** Row in GET /admin/tickets list. */
@@ -299,6 +310,17 @@ export interface InstallationDetail {
   closed_at: string | null;
   created_at: string;
   resolution: InstallationResolutionDoc | null;
+  attempts: InstallationAttempt[];
+}
+
+/** One installation work attempt (visit) with its notes + photos. */
+export interface InstallationAttempt {
+  id: number;
+  attempt_number: number;
+  started_at: string;
+  ended_at: string | null;
+  started_by: User | null;
+  notes: InstallationNote[];
 }
 
 /** The optional uploaded invoice document (PDF or image). */

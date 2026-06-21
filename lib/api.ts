@@ -328,6 +328,16 @@ export class Api {
     return this.request('POST', `/admin/tickets/${reference}/start-work`);
   }
 
+  /** Begin a new work attempt (auto-starts work from ACCEPTED). */
+  startTicketAttempt(reference: string): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/attempts`);
+  }
+
+  /** End the given open work attempt. */
+  endTicketAttempt(reference: string, attemptId: number): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/attempts/${attemptId}/end`);
+  }
+
   resolveTicket(reference: string, summary: string): Promise<TicketDetail> {
     return this.request('POST', `/admin/tickets/${reference}/resolve`, {
       json: { summary },
@@ -633,6 +643,16 @@ export class Api {
 
   selfAssignInstallation(reference: string): Promise<InstallationDetail> {
     return this.request('POST', `/admin/installations/${reference}/self-assign`);
+  }
+
+  /** Begin a new on-site work attempt. */
+  startInstallationAttempt(reference: string): Promise<InstallationDetail> {
+    return this.request('POST', `/admin/installations/${reference}/attempts`);
+  }
+
+  /** End the given open work attempt. */
+  endInstallationAttempt(reference: string, attemptId: number): Promise<InstallationDetail> {
+    return this.request('POST', `/admin/installations/${reference}/attempts/${attemptId}/end`);
   }
 
   closeInstallation(reference: string): Promise<InstallationDetail> {
