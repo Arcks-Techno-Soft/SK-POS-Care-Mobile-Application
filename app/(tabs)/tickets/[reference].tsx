@@ -12,10 +12,10 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
+import { AttemptsSection } from '@/components/AttemptsSection';
 import { EmptyState, Loading, ErrorView } from '@/components/States';
 import TicketCharges from '@/components/ticket/TicketCharges';
 import TicketEvents from '@/components/ticket/TicketEvents';
-import TicketNotes from '@/components/ticket/TicketNotes';
 import TicketShipments from '@/components/ticket/TicketShipments';
 import TicketSignoff from '@/components/ticket/TicketSignoff';
 import TicketSubEngineers from '@/components/ticket/TicketSubEngineers';
@@ -286,7 +286,28 @@ export default function TicketDetailScreen() {
             </Section>
           )}
 
-          <TicketNotes reference={reference} ticket={ticket} reload={reload} />
+          <AttemptsSection
+            attempts={ticket.attempts}
+            canWork={
+              ticket.assigned_engineer?.id === user?.id && ticket.status === 'RESOLVING'
+            }
+            canStart={
+              ticket.assigned_engineer?.id === user?.id &&
+              (ticket.status === 'ACCEPTED' || ticket.status === 'RESOLVING')
+            }
+            onStartAttempt={async () => {
+              await api.startTicketAttempt(reference);
+              reload();
+            }}
+            onEndAttempt={async (attemptId) => {
+              await api.endTicketAttempt(reference, attemptId);
+              reload();
+            }}
+            onAddNote={async (body, images) => {
+              await api.addTicketNote(reference, body, images);
+              reload();
+            }}
+          />
           <TicketSubEngineers reference={reference} ticket={ticket} reload={reload} />
           <TicketCharges reference={reference} ticket={ticket} reload={reload} />
           {!isRemote && (

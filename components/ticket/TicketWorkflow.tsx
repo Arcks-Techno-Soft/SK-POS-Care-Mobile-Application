@@ -311,12 +311,9 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
 
         {ticket.status === 'ACCEPTED' &&
           (assignedToMe ? (
-            <Button
-              title="Start work"
-              icon="play-outline"
-              loading={busy}
-              onPress={() => run(() => api.startWork(reference))}
-            />
+            <Text style={styles.muted}>
+              Start your first attempt below to begin work.
+            </Text>
           ) : (
             <Text style={styles.muted}>
               Accepted by {ticket.assigned_engineer?.name ?? 'the engineer'} — awaiting
@@ -326,15 +323,21 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
 
         {ticket.status === 'RESOLVING' &&
           (assignedToMe ? (
-            <Button
-              title={isRemote ? 'Resolve & close' : 'Mark resolved'}
-              icon="checkmark-done-outline"
-              onPress={() => {
-                setSummary('');
-                setResolveError(null);
-                setResolveOpen(true);
-              }}
-            />
+            ticket.attempts.some((a) => !a.ended_at) ? (
+              <Text style={styles.muted}>End the open attempt below before resolving.</Text>
+            ) : ticket.attempts.filter((a) => a.ended_at).length === 0 ? (
+              <Text style={styles.muted}>Log at least one attempt below before resolving.</Text>
+            ) : (
+              <Button
+                title={isRemote ? 'Resolve & close' : 'Mark resolved'}
+                icon="checkmark-done-outline"
+                onPress={() => {
+                  setSummary('');
+                  setResolveError(null);
+                  setResolveOpen(true);
+                }}
+              />
+            )
           ) : (
             <Text style={styles.muted}>
               {ticket.assigned_engineer?.name ?? 'The engineer'} is working on this
