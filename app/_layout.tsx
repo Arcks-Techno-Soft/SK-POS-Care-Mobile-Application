@@ -3,12 +3,15 @@ import 'react-native-reanimated';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { UpdateBanner } from '@/components/UpdateBanner';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { colors } from '@/lib/theme';
+import { OtaUpdatesProvider } from '@/lib/updates';
 
 /** Watches auth status and keeps the user on a route they're allowed to see. */
 function RootNavigator() {
@@ -53,10 +56,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <SafeAreaProvider>
-          <AuthProvider>
-            <StatusBar style="dark" />
-            <RootNavigator />
-          </AuthProvider>
+          <OtaUpdatesProvider>
+            <AuthProvider>
+              <StatusBar style="dark" />
+              <View style={{ flex: 1 }}>
+                <RootNavigator />
+                <UpdateBanner />
+              </View>
+            </AuthProvider>
+          </OtaUpdatesProvider>
         </SafeAreaProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>

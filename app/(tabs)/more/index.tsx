@@ -24,6 +24,7 @@ import { Section } from '@/components/ui/Section';
 import { useAuth } from '@/lib/auth';
 import { roleLabel } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
+import { otaStatusLabel, useOtaUpdates } from '@/lib/updates';
 
 /* ---------- reusable tappable row ---------- */
 
@@ -62,9 +63,12 @@ function Row({
 export default function MoreScreen() {
   const { user, biometricAvailable, biometricEnabled, enableBiometric, disableBiometric, lock, signOut, serverUrl, setServerUrl } = useAuth();
   const router = useRouter();
+  const { status: otaStatus, ready: otaReady, check: checkForUpdates, apply: applyUpdate } = useOtaUpdates();
 
   const [bioError, setBioError] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState(serverUrl);
+
+  const otaBusy = otaStatus === 'checking' || otaStatus === 'downloading';
 
   // Version line: marketing version + native build number identify the binary
   // they installed; the OTA update id identifies the JS bundle they've pulled
@@ -207,6 +211,23 @@ export default function MoreScreen() {
           />
           <Button title="Switch server & sign out" variant="secondary" onPress={handleSaveServerUrl} />
         </View>
+      </Section>
+
+      {/* ---- App updates ---- */}
+      <Section title="App" flush>
+        <Row
+          label="Check for updates"
+          sub={otaStatusLabel(otaStatus)}
+          last
+          onPress={otaBusy ? undefined : checkForUpdates}
+          right={
+            otaReady ? (
+              <Button title="Restart" size="sm" onPress={applyUpdate} />
+            ) : (
+              <Text style={styles.chevron}>{otaBusy ? '…' : '›'}</Text>
+            )
+          }
+        />
       </Section>
 
       {/* ---- Sign out ---- */}
