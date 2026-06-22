@@ -317,6 +317,13 @@ export class Api {
     });
   }
 
+  /** Admin/Manager/assignee: record out-of-warranty payment; closes the ticket. */
+  collectPayment(reference: string, amountInr: number): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/collect-payment`, {
+      json: { amount_collected_inr: amountInr },
+    });
+  }
+
   /** Admin/Owner: soft-delete a ticket in any status. */
   deleteTicket(reference: string, reason?: string): Promise<TicketDetail> {
     return this.request('DELETE', `/admin/tickets/${reference}`, {

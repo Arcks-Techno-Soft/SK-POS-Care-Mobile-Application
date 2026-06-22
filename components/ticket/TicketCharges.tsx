@@ -18,7 +18,7 @@ import { Section } from '@/components/ui/Section';
 import { Badge, Banner, Button, Divider, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
-import { useApi } from '@/lib/auth';
+import { useApi, useAuth } from '@/lib/auth';
 import { formatINR } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
 import { ticketIsOperable, ticketLockReason } from '@/lib/options';
@@ -42,8 +42,9 @@ function errMsg(e: unknown): string {
     : (e as Error)?.message ?? 'Something went wrong.';
 }
 
-export default function TicketCharges({ reference, ticket }: Props) {
+export default function TicketCharges({ reference, ticket, reload }: Props) {
   const api = useApi();
+  const { user } = useAuth();
   const chargesQuery = useQuery<ChargesSummary>(
     () => api.getCharges(reference),
     [reference],
@@ -52,11 +53,23 @@ export default function TicketCharges({ reference, ticket }: Props) {
   const [feeOpen, setFeeOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editLine, setEditLine] = useState<ChargeLineItem | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
 
   const charges = chargesQuery.data;
   const operable = ticketIsOperable(ticket.status);
   // Remote-support tickets carry no spare parts — show only the service fee.
   const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
+
+  // Out-of-warranty payment tracking. payment_status is null on legacy tickets
+  // (created before the feature) — those never show payment UI.
+  const outOfWarranty = ticket.warranty_status === 'OUT_OF_WARRANTY';
+  const paymentPending =
+    outOfWarranty && ticket.payment_status === 'PENDING' && ticket.status === 'RESOLVED';
+  const paymentCollected = ticket.payment_status === 'COLLECTED';
+  const canCollect =
+    user?.role === 'ADMIN' ||
+    user?.role === 'MANAGER' ||
+    ticket.assigned_engineer?.id === user?.id;
 
   return (
     <Section title={isRemote ? 'Service charge' : 'Spares & charges'}>
@@ -67,38 +80,36 @@ export default function TicketCharges({ reference, ticket }: Props) {
           <Banner message={chargesQuery.error} />
         ) : charges ? (
           <>
-            {/* Service fee is spared for covered tickets (under warranty /
-                AMC) — the row is hidden entirely. Out-of-warranty defaults
-                to ₹800 and is editable. */}
-            {!charges.is_warranty && (
-              <>
-                <View style={styles.feeRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.lineName}>Service fee</Text>
-                    {charges.service_fee_billable_inr !==
-                      charges.service_fee_inr && (
-                      <Text style={styles.meta}>
-                        Billable {formatINR(charges.service_fee_billable_inr)}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={styles.lineTotal}>
-                    {formatINR(charges.service_fee_inr)}
-                  </Text>
-                  {operable && (
-                    <Pressable
-                      onPress={() => setFeeOpen(true)}
-                      hitSlop={8}
-                      style={styles.iconBtn}
-                    >
-                      <Ionicons name="create-outline" size={18} color={colors.inkMuted} />
-                    </Pressable>
+            {/* Service fee — always shown and editable now (defaults to ₹0).
+                For covered tickets (under warranty / AMC) the billable line
+                makes clear the customer owes ₹0 even if a fee is recorded. */}
+            <>
+              <View style={styles.feeRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.lineName}>Service fee</Text>
+                  {charges.service_fee_billable_inr !==
+                    charges.service_fee_inr && (
+                    <Text style={styles.meta}>
+                      Billable {formatINR(charges.service_fee_billable_inr)}
+                    </Text>
                   )}
                 </View>
+                <Text style={styles.lineTotal}>
+                  {formatINR(charges.service_fee_inr)}
+                </Text>
+                {operable && (
+                  <Pressable
+                    onPress={() => setFeeOpen(true)}
+                    hitSlop={8}
+                    style={styles.iconBtn}
+                  >
+                    <Ionicons name="create-outline" size={18} color={colors.inkMuted} />
+                  </Pressable>
+                )}
+              </View>
 
-                <Divider style={{ marginVertical: spacing.sm }} />
-              </>
-            )}
+              <Divider style={{ marginVertical: spacing.sm }} />
+            </>
 
             {/* Spare lines — not applicable to remote-support tickets. */}
             {!isRemote &&
@@ -186,6 +197,43 @@ export default function TicketCharges({ reference, ticket }: Props) {
               )}
             </View>
             )}
+
+            {/* Out-of-warranty payment: held at RESOLVED until collected. */}
+            {paymentCollected ? (
+              <View style={{ marginTop: spacing.md }}>
+                <Banner
+                  tone="success"
+                  message={`Payment collected${
+                    ticket.payment_amount_inr != null
+                      ? ` · ${formatINR(ticket.payment_amount_inr)}`
+                      : ''
+                  }${
+                    ticket.payment_collected_by
+                      ? ` by ${ticket.payment_collected_by.name}`
+                      : ''
+                  }`}
+                />
+              </View>
+            ) : paymentPending ? (
+              <View style={{ marginTop: spacing.md }}>
+                <Divider style={{ marginBottom: spacing.md }} />
+                <View style={styles.feeRow}>
+                  <Badge label="Payment pending" tone="warn" />
+                  <View style={{ flex: 1 }} />
+                </View>
+                <Text style={[styles.meta, { marginTop: spacing.xs }]}>
+                  Signed off but payment not collected — record it to close the ticket.
+                </Text>
+                {canCollect && (
+                  <Button
+                    title="Mark payment collected"
+                    icon="cash-outline"
+                    onPress={() => setPayOpen(true)}
+                    style={{ marginTop: spacing.sm }}
+                  />
+                )}
+              </View>
+            ) : null}
           </>
         ) : null}
       </View>
@@ -239,6 +287,24 @@ export default function TicketCharges({ reference, ticket }: Props) {
             chargesQuery.reload();
           } catch (e) {
             Alert.alert('Charges', errMsg(e));
+            throw e;
+          }
+        }}
+      />
+
+      {/* Collect payment modal */}
+      <CollectPaymentModal
+        visible={payOpen}
+        defaultAmount={charges?.grand_total_inr ?? 0}
+        onClose={() => setPayOpen(false)}
+        onSave={async (amount) => {
+          try {
+            await api.collectPayment(reference, amount);
+            setPayOpen(false);
+            reload();
+            chargesQuery.reload();
+          } catch (e) {
+            Alert.alert('Payment', errMsg(e));
             throw e;
           }
         }}
@@ -390,6 +456,91 @@ function ServiceFeeModal({
             />
             <Button
               title="Save"
+              loading={saving}
+              fullWidth={false}
+              onPress={submit}
+              style={{ flex: 1 }}
+            />
+          </View>
+        </Pressable>
+      </Pressable>
+      </KeyboardAwareSheet>
+    </Modal>
+  );
+}
+
+/* ---------------- Collect payment modal ---------------- */
+
+function CollectPaymentModal({
+  visible,
+  defaultAmount,
+  onClose,
+  onSave,
+}: {
+  visible: boolean;
+  defaultAmount: number;
+  onClose: () => void;
+  onSave: (amount: number) => Promise<void>;
+}) {
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [wasVisible, setWasVisible] = useState(false);
+  if (visible && !wasVisible) {
+    setWasVisible(true);
+    setValue(String(defaultAmount));
+    setError(null);
+  }
+  if (!visible && wasVisible) setWasVisible(false);
+
+  const submit = async () => {
+    const amount = Number(value);
+    if (value.trim() === '' || isNaN(amount) || amount < 0) {
+      setError('Enter the amount collected.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(Math.round(amount));
+    } catch {
+      // surfaced upstream
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAwareSheet>
+      <Pressable style={styles.backdrop} onPress={onClose}>
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <Text style={styles.sheetTitle}>Collect payment</Text>
+          <Text style={styles.sheetHint}>
+            Recording payment closes this ticket.
+          </Text>
+          <Field
+            label="Amount collected (₹)"
+            value={value}
+            onChangeText={(t) => {
+              setValue(t);
+              if (error) setError(null);
+            }}
+            placeholder="0"
+            keyboardType="number-pad"
+            error={error ?? undefined}
+          />
+          <View style={styles.sheetActions}>
+            <Button
+              title="Cancel"
+              variant="secondary"
+              fullWidth={false}
+              onPress={onClose}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="Collect & close"
               loading={saving}
               fullWidth={false}
               onPress={submit}

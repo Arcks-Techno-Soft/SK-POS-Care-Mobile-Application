@@ -109,6 +109,11 @@ export default function TicketDetailScreen() {
                   tone={warrantyTone(ticket.warranty_status)}
                 />
               )}
+              {ticket.status === 'RESOLVED' &&
+                ticket.warranty_status === 'OUT_OF_WARRANTY' &&
+                ticket.payment_status === 'PENDING' && (
+                  <Badge label="Payment pending" tone="warn" />
+                )}
             </View>
             <View style={styles.headerMeta}>
               <Text style={styles.ref}>{ticket.reference}</Text>
