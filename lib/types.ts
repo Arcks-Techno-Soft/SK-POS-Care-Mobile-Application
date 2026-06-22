@@ -33,6 +33,9 @@ export interface User {
   active: boolean;
   email: string | null;
   district: string | null;
+  /** Active (not-closed) tickets assigned to this engineer — set on the
+   * /engineers picker list so the UI can recommend the least-busy engineers. */
+  open_ticket_count?: number;
 }
 
 export interface TokenResponse {
