@@ -594,9 +594,9 @@ function WorkflowSection({
     [],
   );
 
-  // Least-busy engineers first; the load is surfaced as the option sublabel.
+  // Same-district engineers first, then least-busy; load + district in sublabel.
   const engineerOptions = [...(engineers ?? [])]
-    .sort(byEngineerAvailability)
+    .sort(byEngineerAvailability(installation.city))
     .map((e) => ({
       label: e.name,
       value: String(e.id),

@@ -111,7 +111,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
         e.id !== ticket.assigned_engineer?.id &&
         !coEngineers.some((c) => c.engineer.id === e.id),
     )
-    .sort(byEngineerAvailability)
+    .sort(byEngineerAvailability(ticket.city))
     .map((e) => ({
       label: e.name,
       value: String(e.id),
@@ -208,7 +208,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               value={pickedEngineer}
               placeholder={loadingEngineers ? 'Loading engineers…' : 'Select an engineer…'}
               sheetTitle="Engineers"
-              options={[...(engineers ?? [])].sort(byEngineerAvailability).map((e) => ({
+              options={[...(engineers ?? [])].sort(byEngineerAvailability(ticket.city)).map((e) => ({
                 label: e.name,
                 value: String(e.id),
                 sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
@@ -283,7 +283,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                   sheetTitle="Engineers"
                   options={(engineers ?? [])
                     .filter((e) => e.id !== ticket.assigned_engineer?.id)
-                    .sort(byEngineerAvailability)
+                    .sort(byEngineerAvailability(ticket.city))
                     .map((e) => ({
                       label: e.name,
                       value: String(e.id),

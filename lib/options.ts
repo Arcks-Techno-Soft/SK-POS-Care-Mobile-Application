@@ -123,20 +123,34 @@ export const INDIAN_STATES = [
   'Puducherry',
 ];
 
-/** Caption describing an engineer's current ticket load for the assign picker. */
+/** Caption describing an engineer's current workload for the assign picker.
+ *  Workload = open tickets + pending installations (see backend EngineerOption). */
 export function engineerLoadLabel(count?: number | null): string {
   const n = count ?? 0;
   return n === 0
     ? 'Available — recommended'
-    : `${n} assigned ticket${n === 1 ? '' : 's'} already`;
+    : `${n} open job${n === 1 ? '' : 's'}`;
 }
 
-/** Sort engineers least-busy first, then alphabetically. */
-export function byEngineerAvailability(
-  a: { open_ticket_count?: number; name: string },
-  b: { open_ticket_count?: number; name: string },
-): number {
-  return (a.open_ticket_count ?? 0) - (b.open_ticket_count ?? 0) || a.name.localeCompare(b.name);
+type EngineerLike = { open_ticket_count?: number; district?: string | null; name: string };
+
+/** Returns a comparator that sorts engineers for the assign picker:
+ *  1. engineers whose district matches the job's area first (case-insensitive),
+ *  2. then least-busy (fewest open tickets + installations),
+ *  3. then alphabetically.
+ *  Pass the job's city (tickets/installations carry no district field). */
+export function byEngineerAvailability(targetArea?: string | null) {
+  const target = targetArea?.trim().toLowerCase() || null;
+  return (a: EngineerLike, b: EngineerLike): number => {
+    if (target) {
+      const aLocal = (a.district ?? '').trim().toLowerCase() === target ? 0 : 1;
+      const bLocal = (b.district ?? '').trim().toLowerCase() === target ? 0 : 1;
+      if (aLocal !== bLocal) return aLocal - bLocal;
+    }
+    return (
+      (a.open_ticket_count ?? 0) - (b.open_ticket_count ?? 0) || a.name.localeCompare(b.name)
+    );
+  };
 }
 
 /** Human-readable label for a role. MANAGER is shown as "Admin" (matches web). */
