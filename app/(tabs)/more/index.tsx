@@ -222,7 +222,7 @@ export default function MoreScreen() {
           onPress={otaBusy ? undefined : checkForUpdates}
           right={
             otaReady ? (
-              <Button title="Restart" size="sm" onPress={applyUpdate} />
+              <Button title="Restart" size="sm" fullWidth={false} onPress={applyUpdate} />
             ) : (
               <Text style={styles.chevron}>{otaBusy ? '…' : '›'}</Text>
             )
