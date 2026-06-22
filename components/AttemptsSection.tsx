@@ -181,8 +181,10 @@ export function AttemptsSection({
         );
       })}
 
-      {/* Start a new attempt when none is open and the status allows it. */}
-      {canWork && canStart && !openAttempt && (
+      {/* Start a new attempt when none is open and the status allows it.
+          Gated on canStart (not canWork): a ticket in ACCEPTED can't "work"
+          yet, but starting the first attempt is what moves it to RESOLVING. */}
+      {canStart && !openAttempt && (
         <Button
           title={`Start attempt ${nextNumber}`}
           icon="play-circle-outline"
