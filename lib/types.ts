@@ -134,8 +134,10 @@ export interface TicketDetail {
   status: TicketStatus;
   warranty_status: WarrantyStatus;
   service_type: ServiceType;
-  // Out-of-warranty payment tracking. null = legacy ticket (never gated).
+  // Payment tracking. payment_status null = legacy ticket (never gated).
+  // payment_required is the backend-computed gate (OOW, or covered + charges).
   payment_status?: 'PENDING' | 'COLLECTED' | null;
+  payment_required?: boolean;
   payment_amount_inr?: number | null;
   payment_collected_at?: string | null;
   payment_collected_by?: User | null;

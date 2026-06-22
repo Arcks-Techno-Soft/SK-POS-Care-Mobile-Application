@@ -62,10 +62,18 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
 
   // Out-of-warranty payment tracking. payment_status is null on legacy tickets
   // (created before the feature) — those never show payment UI.
+  // `payment_required` is computed by the backend (out-of-warranty, or covered
+  // with charges). Out-of-warranty additionally requires a positive amount.
   const outOfWarranty = ticket.warranty_status === 'OUT_OF_WARRANTY';
   const paymentPending =
-    outOfWarranty && ticket.payment_status === 'PENDING' && ticket.status === 'RESOLVED';
+    !!ticket.payment_required &&
+    ticket.payment_status === 'PENDING' &&
+    ticket.status === 'RESOLVED';
   const paymentCollected = ticket.payment_status === 'COLLECTED';
+  // The ticket only *holds* for payment once both signatures are captured;
+  // before that, "payment pending" is just an early heads-up.
+  const bothSigned =
+    !!ticket.resolution?.customer_signed_at && !!ticket.resolution?.engineer_signed_at;
   const canCollect =
     user?.role === 'ADMIN' ||
     user?.role === 'MANAGER' ||
@@ -222,9 +230,11 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
                   <View style={{ flex: 1 }} />
                 </View>
                 <Text style={[styles.meta, { marginTop: spacing.xs }]}>
-                  Signed off but payment not collected — record it to close the ticket.
+                  {bothSigned
+                    ? 'Signed off — payment not collected. Record it to close the ticket.'
+                    : 'Payment due — collect after sign-off.'}
                 </Text>
-                {canCollect && (
+                {bothSigned && canCollect && (
                   <Button
                     title="Mark payment collected"
                     icon="cash-outline"
@@ -296,6 +306,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
       <CollectPaymentModal
         visible={payOpen}
         defaultAmount={charges?.grand_total_inr ?? 0}
+        requirePositive={outOfWarranty}
         onClose={() => setPayOpen(false)}
         onSave={async (amount) => {
           try {
@@ -474,11 +485,14 @@ function ServiceFeeModal({
 function CollectPaymentModal({
   visible,
   defaultAmount,
+  requirePositive,
   onClose,
   onSave,
 }: {
   visible: boolean;
   defaultAmount: number;
+  /** Out-of-warranty must collect > ₹0; covered tickets may record ₹0. */
+  requirePositive: boolean;
   onClose: () => void;
   onSave: (amount: number) => Promise<void>;
 }) {
@@ -497,7 +511,11 @@ function CollectPaymentModal({
   const submit = async () => {
     const amount = Number(value);
     if (value.trim() === '' || isNaN(amount) || amount < 0) {
-      setError('Enter the amount collected.');
+      setError('Enter a valid amount.');
+      return;
+    }
+    if (requirePositive && amount <= 0) {
+      setError('Enter an amount greater than ₹0.');
       return;
     }
     setSaving(true);

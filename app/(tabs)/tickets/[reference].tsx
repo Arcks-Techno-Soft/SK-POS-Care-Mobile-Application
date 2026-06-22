@@ -110,7 +110,7 @@ export default function TicketDetailScreen() {
                 />
               )}
               {ticket.status === 'RESOLVED' &&
-                ticket.warranty_status === 'OUT_OF_WARRANTY' &&
+                ticket.payment_required &&
                 ticket.payment_status === 'PENDING' && (
                   <Badge label="Payment pending" tone="warn" />
                 )}
