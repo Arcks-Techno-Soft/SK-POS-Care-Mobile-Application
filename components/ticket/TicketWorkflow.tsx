@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
+import { byEngineerAvailability, engineerLoadLabel } from '@/lib/options';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type { TicketDetail, User } from '@/lib/types';
@@ -110,7 +111,12 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
         e.id !== ticket.assigned_engineer?.id &&
         !coEngineers.some((c) => c.engineer.id === e.id),
     )
-    .map((e) => ({ label: e.name, value: String(e.id), sublabel: e.district ?? undefined }));
+    .sort(byEngineerAvailability)
+    .map((e) => ({
+      label: e.name,
+      value: String(e.id),
+      sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
+    }));
 
   const addCoEngineer = () => {
     if (!pickedCoEngineer) return;
@@ -202,10 +208,10 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               value={pickedEngineer}
               placeholder={loadingEngineers ? 'Loading engineers…' : 'Select an engineer…'}
               sheetTitle="Engineers"
-              options={(engineers ?? []).map((e) => ({
+              options={[...(engineers ?? [])].sort(byEngineerAvailability).map((e) => ({
                 label: e.name,
                 value: String(e.id),
-                sublabel: e.district ?? undefined,
+                sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
               }))}
               onChange={setPickedEngineer}
             />
@@ -277,10 +283,11 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                   sheetTitle="Engineers"
                   options={(engineers ?? [])
                     .filter((e) => e.id !== ticket.assigned_engineer?.id)
+                    .sort(byEngineerAvailability)
                     .map((e) => ({
                       label: e.name,
                       value: String(e.id),
-                      sublabel: e.district ?? undefined,
+                      sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
                     }))}
                   onChange={setPickedEngineer}
                 />

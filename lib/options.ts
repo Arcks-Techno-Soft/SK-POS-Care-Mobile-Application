@@ -123,6 +123,22 @@ export const INDIAN_STATES = [
   'Puducherry',
 ];
 
+/** Caption describing an engineer's current ticket load for the assign picker. */
+export function engineerLoadLabel(count?: number | null): string {
+  const n = count ?? 0;
+  return n === 0
+    ? 'Available — recommended'
+    : `${n} assigned ticket${n === 1 ? '' : 's'} already`;
+}
+
+/** Sort engineers least-busy first, then alphabetically. */
+export function byEngineerAvailability(
+  a: { open_ticket_count?: number; name: string },
+  b: { open_ticket_count?: number; name: string },
+): number {
+  return (a.open_ticket_count ?? 0) - (b.open_ticket_count ?? 0) || a.name.localeCompare(b.name);
+}
+
 /** Human-readable label for a role. MANAGER is shown as "Admin" (matches web). */
 export function roleLabel(role: Role): string {
   switch (role) {

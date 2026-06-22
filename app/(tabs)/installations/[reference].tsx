@@ -28,7 +28,13 @@ import { pickFromLibrary, takePhoto } from '@/lib/images';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
-import { INDIAN_STATES, prettyEnum, roleLabel } from '@/lib/options';
+import {
+  byEngineerAvailability,
+  engineerLoadLabel,
+  INDIAN_STATES,
+  prettyEnum,
+  roleLabel,
+} from '@/lib/options';
 import { colors, fontSize, spacing, statusTone } from '@/lib/theme';
 import type {
   InstallationDetail,
@@ -588,11 +594,14 @@ function WorkflowSection({
     [],
   );
 
-  const engineerOptions = (engineers ?? []).map((e) => ({
-    label: e.name,
-    value: String(e.id),
-    sublabel: e.district ?? undefined,
-  }));
+  // Least-busy engineers first; the load is surfaced as the option sublabel.
+  const engineerOptions = [...(engineers ?? [])]
+    .sort(byEngineerAvailability)
+    .map((e) => ({
+      label: e.name,
+      value: String(e.id),
+      sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
+    }));
 
   const handleAssign = async () => {
     if (!selectedEngineerId) {
