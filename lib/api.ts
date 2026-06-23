@@ -532,6 +532,7 @@ export class Api {
     password: string;
     role: string;
     district?: string;
+    is_sales_rep?: boolean;
   }): Promise<{ user: User }> {
     return this.request('POST', '/admin/users', { json: body });
   }
@@ -539,6 +540,12 @@ export class Api {
   setUserActive(userId: number, active: boolean): Promise<User> {
     return this.request('PATCH', `/admin/users/${userId}/active`, {
       json: { active },
+    });
+  }
+
+  setUserSalesRep(userId: number, isSalesRep: boolean): Promise<User> {
+    return this.request('PATCH', `/admin/users/${userId}/sales-rep`, {
+      json: { is_sales_rep: isSalesRep },
     });
   }
 

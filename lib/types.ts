@@ -33,6 +33,9 @@ export interface User {
   active: boolean;
   email: string | null;
   district: string | null;
+  /** When true, this user can be credited as a sales rep on installations,
+   * regardless of role. SALES-role users are eligible without this flag. */
+  is_sales_rep?: boolean;
   /** Active (not-closed) tickets assigned to this engineer — set on the
    * /engineers picker list so the UI can recommend the least-busy engineers. */
   open_ticket_count?: number;
