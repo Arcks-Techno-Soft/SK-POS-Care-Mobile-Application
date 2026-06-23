@@ -13,6 +13,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -40,11 +41,15 @@ function UserCard({
   currentUserId,
   onToggleActive,
   toggling,
+  onToggleSalesRep,
+  togglingSalesRep,
 }: {
   user: User;
   currentUserId: number;
   onToggleActive: (user: User) => void;
   toggling: boolean;
+  onToggleSalesRep: (user: User) => void;
+  togglingSalesRep: boolean;
 }) {
   const isSelf = user.id === currentUserId;
   const tone = user.active ? 'success' : 'neutral';
@@ -55,7 +60,10 @@ function UserCard({
         <Avatar name={user.name} size={42} />
         <View style={styles.userInfo}>
           <Text style={styles.userName} numberOfLines={1}>{user.name}</Text>
-          <Text style={styles.userRole}>{roleLabel(user.role)}</Text>
+          <Text style={styles.userRole}>
+            {roleLabel(user.role)}
+            {user.is_sales_rep && user.role !== 'SALES' ? '  ·  Sales rep' : ''}
+          </Text>
           <Text style={styles.userMeta} numberOfLines={1}>@{user.username}</Text>
         </View>
         <Badge label={user.active ? 'Active' : 'Inactive'} tone={tone} />
@@ -104,6 +112,22 @@ function UserCard({
       {isSelf && (
         <Text style={styles.selfNote}>This is your account</Text>
       )}
+
+      {/* SALES-role users are always reps; the flag is for other roles. */}
+      {user.role !== 'SALES' && (
+        <>
+          <Divider style={styles.cardDivider} />
+          <Button
+            title={user.is_sales_rep ? 'Remove sales rep' : 'Make sales rep'}
+            variant="secondary"
+            size="sm"
+            loading={togglingSalesRep}
+            onPress={() => onToggleSalesRep(user)}
+            style={{ alignSelf: 'flex-start' }}
+            fullWidth={false}
+          />
+        </>
+      )}
     </Card>
   );
 }
@@ -144,6 +168,7 @@ function CreateUserModal({
   const api = useApi();
   const [form, setForm] = useState<CreateForm>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<CreateForm>>({});
+  const [alsoSalesRep, setAlsoSalesRep] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -188,9 +213,12 @@ function CreateUserModal({
         password: form.password,
         role: form.role,
         district: form.role === 'ENGINEER' ? form.district.trim() : undefined,
+        // SALES role is implicitly a rep; the toggle lets other roles opt in.
+        is_sales_rep: form.role === 'SALES' ? true : alsoSalesRep,
       });
       setForm(EMPTY_FORM);
       setErrors({});
+      setAlsoSalesRep(false);
       onCreated();
       onClose();
     } catch (e) {
@@ -203,6 +231,7 @@ function CreateUserModal({
   function handleClose() {
     setForm(EMPTY_FORM);
     setErrors({});
+    setAlsoSalesRep(false);
     setSubmitError(null);
     onClose();
   }
@@ -311,6 +340,16 @@ function CreateUserModal({
             />
           )}
 
+          {form.role !== 'SALES' && (
+            <View style={styles.salesRepRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.salesRepLabel}>Also a sales representative</Text>
+                <Text style={styles.salesRepHint}>Can be credited on installations.</Text>
+              </View>
+              <Switch value={alsoSalesRep} onValueChange={setAlsoSalesRep} />
+            </View>
+          )}
+
           <Button
             title="Create account"
             loading={submitting}
@@ -328,6 +367,7 @@ export default function UsersScreen() {
   const { user: currentUser } = useAuth();
   const api = useApi();
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [togglingSalesRepId, setTogglingSalesRepId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const { data, loading, refreshing, error, refresh } = useQuery<User[]>(
@@ -376,6 +416,18 @@ export default function UsersScreen() {
     );
   }
 
+  async function handleToggleSalesRep(u: User) {
+    setTogglingSalesRepId(u.id);
+    try {
+      await api.setUserSalesRep(u.id, !u.is_sales_rep);
+      refresh();
+    } catch (e) {
+      Alert.alert('Error', (e as Error).message);
+    } finally {
+      setTogglingSalesRepId(null);
+    }
+  }
+
   return (
     <>
       <Stack.Screen options={{ title: 'Staff accounts' }} />
@@ -405,6 +457,8 @@ export default function UsersScreen() {
               currentUserId={currentUser.id}
               onToggleActive={handleToggleActive}
               toggling={togglingId === u.id}
+              onToggleSalesRep={handleToggleSalesRep}
+              togglingSalesRep={togglingSalesRepId === u.id}
             />
           ))
         )}
@@ -502,5 +556,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.danger,
     marginTop: -spacing.sm,
+  },
+  salesRepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  salesRepLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.ink,
+  },
+  salesRepHint: {
+    fontSize: fontSize.xs,
+    color: colors.inkSubtle,
+    marginTop: 2,
   },
 });
