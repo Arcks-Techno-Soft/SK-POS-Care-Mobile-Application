@@ -41,7 +41,7 @@ export const WARRANTY_STATUSES: WarrantyStatus[] = [
 // signatures, PDF and spare parts and closes in one Resolve & Close step.
 export const SERVICE_TYPES: ServiceType[] = ['SITE_VISIT', 'REMOTE_SUPPORT'];
 
-export const ASSIGNABLE_ROLES: Role[] = ['MANAGER', 'ENGINEER'];
+export const ASSIGNABLE_ROLES: Role[] = ['MANAGER', 'ENGINEER', 'SALES'];
 
 export const BUSINESS_TYPES = [
   'Restaurant',
@@ -162,6 +162,8 @@ export function roleLabel(role: Role): string {
       return 'Manager';
     case 'ENGINEER':
       return 'Engineer';
+    case 'SALES':
+      return 'Sales';
     default:
       return role;
   }

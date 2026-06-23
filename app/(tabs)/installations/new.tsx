@@ -27,6 +27,8 @@ export default function NewInstallationScreen() {
   const { user } = useAuth();
 
   const isEngineer = user?.role === 'ENGINEER';
+  // Only Admin/Manager can pre-assign an engineer or credit a sales rep.
+  const canAssign = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const [businessName, setBusinessName] = useState('');
   const [businessCategory, setBusinessCategory] = useState('');
@@ -44,6 +46,7 @@ export default function NewInstallationScreen() {
   const [stateName, setStateName] = useState<string | null>(null);
   const [pincode, setPincode] = useState('');
   const [assignedEngineerId, setAssignedEngineerId] = useState<string | null>(null);
+  const [salesRepId, setSalesRepId] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -56,9 +59,20 @@ export default function NewInstallationScreen() {
     [isEngineer]
   );
 
+  // Sales reps for the "sourced by" picker — only Admin/Manager pick one.
+  const { data: salesReps } = useQuery<User[]>(
+    () => (canAssign ? api.listSalesReps() : Promise.resolve([])),
+    [canAssign]
+  );
+
   const engineerOptions = [
     { label: 'None (unassigned)', value: '' },
     ...(engineers ?? []).map((e) => ({ label: e.name, value: String(e.id) })),
+  ];
+
+  const salesRepOptions = [
+    { label: 'None', value: '' },
+    ...(salesReps ?? []).map((r) => ({ label: r.name, value: String(r.id) })),
   ];
 
   const validate = (): boolean => {
@@ -117,6 +131,7 @@ export default function NewInstallationScreen() {
         state: string;
         pincode: string;
         assigned_engineer_id?: number;
+        sales_rep_id?: number;
       } = {
         business_name: businessName.trim(),
         business_category: businessCategory.trim(),
@@ -134,6 +149,7 @@ export default function NewInstallationScreen() {
       if (addressLine2.trim()) body.address_line2 = addressLine2.trim();
       if (addressLine3.trim()) body.address_line3 = addressLine3.trim();
       if (assignedEngineerId) body.assigned_engineer_id = Number(assignedEngineerId);
+      if (canAssign && salesRepId) body.sales_rep_id = Number(salesRepId);
 
       const created = await api.createInstallation(body);
 
@@ -357,6 +373,21 @@ export default function NewInstallationScreen() {
             placeholder="None (unassigned)"
             sheetTitle="Assign Engineer"
             options={engineerOptions}
+          />
+        </>
+      )}
+
+      {canAssign && (
+        <>
+          <Text style={styles.sectionLabel}>Sales Representative (optional)</Text>
+
+          <Select
+            label="Sourced by"
+            value={salesRepId}
+            onChange={(v) => setSalesRepId(v || null)}
+            placeholder="None"
+            sheetTitle="Sales Representative"
+            options={salesRepOptions}
           />
         </>
       )}

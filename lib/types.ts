@@ -3,7 +3,7 @@
  * Field names match the JSON the backend returns exactly.
  */
 
-export type Role = 'ADMIN' | 'MANAGER' | 'ENGINEER';
+export type Role = 'ADMIN' | 'MANAGER' | 'ENGINEER' | 'SALES';
 
 export type TicketStatus =
   | 'OPEN'
@@ -315,6 +315,7 @@ export interface InstallationDetail {
   created_by: User | null;
   assigned_by: User | null;
   assigned_engineer: User | null;
+  sales_rep: User | null;
   assigned_at: string | null;
   completed_at: string | null;
   closed_at: string | null;
@@ -353,6 +354,7 @@ export interface InstallationListItem {
   status: InstallationStatus;
   created_by: User | null;
   assigned_engineer: User | null;
+  sales_rep: User | null;
   created_at: string;
 }
 

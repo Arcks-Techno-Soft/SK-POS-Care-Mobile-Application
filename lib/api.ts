@@ -515,6 +515,10 @@ export class Api {
     return this.request('GET', '/admin/engineers');
   }
 
+  listSalesReps(): Promise<User[]> {
+    return this.request('GET', '/admin/sales-reps');
+  }
+
   listUsers(): Promise<User[]> {
     return this.request('GET', '/admin/users');
   }
@@ -601,6 +605,7 @@ export class Api {
     latitude?: number;
     longitude?: number;
     assigned_engineer_id?: number;
+    sales_rep_id?: number;
   }): Promise<InstallationDetail> {
     return this.request('POST', '/admin/installations', { json: body });
   }

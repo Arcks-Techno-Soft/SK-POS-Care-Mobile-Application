@@ -791,6 +791,11 @@ function WorkflowSection({
             Created by {installation.created_by.name}
           </Text>
         )}
+        {installation.sales_rep && (
+          <Text style={styles.tsRow}>
+            Sales rep: {installation.sales_rep.name}
+          </Text>
+        )}
         {installation.assigned_engineer && (
           <Text style={styles.tsRow}>
             Assigned to {installation.assigned_engineer.name}
