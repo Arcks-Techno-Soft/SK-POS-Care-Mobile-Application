@@ -144,6 +144,10 @@ export interface TicketDetail {
   payment_amount_inr?: number | null;
   payment_collected_at?: string | null;
   payment_collected_by?: User | null;
+  // Partial-payment money breakdown. Ticket closes only when pending hits ₹0.
+  amount_due_inr?: number;
+  amount_collected_inr?: number;
+  amount_pending_inr?: number;
   preferred_contact_time?: string | null;
   raised_by: User | null;
   acknowledged_by: User | null;
