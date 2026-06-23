@@ -65,6 +65,11 @@ export default function InstallationDetailScreen() {
   };
 
   const canManage = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  // The assigned engineer (or a self-assigned manager) — the only non-manager
+  // who may act on the installation. Everyone else (e.g. SALES) is view-only.
+  const isAssignee =
+    !!installation && installation.assigned_engineer?.id === user?.id;
+  const canAct = canManage || isAssignee;
   // Invoice is editable by the assignee / Admin / Manager, but only until the
   // installation is CLOSED (after which it's frozen into the signed PDF).
   const canEditInvoice =
@@ -113,6 +118,7 @@ export default function InstallationDetailScreen() {
           <WorkflowSection
             installation={installation}
             canManage={canManage}
+            isAssignee={isAssignee}
             api={api}
             onReload={reloadAndBadge}
           />
@@ -196,7 +202,12 @@ export default function InstallationDetailScreen() {
 
           {/* 5. Sign-off (COMPLETED or CLOSED) */}
           {(installation.status === 'COMPLETED' || installation.status === 'CLOSED') && (
-            <SignoffSection installation={installation} api={api} onReload={reloadAndBadge} />
+            <SignoffSection
+              installation={installation}
+              canAct={canAct}
+              api={api}
+              onReload={reloadAndBadge}
+            />
           )}
 
           {/* 6. Activity */}
@@ -570,11 +581,13 @@ function AddressRow({
 function WorkflowSection({
   installation,
   canManage,
+  isAssignee,
   api,
   onReload,
 }: {
   installation: InstallationDetail;
   canManage: boolean;
+  isAssignee: boolean;
   api: ReturnType<typeof useApi>;
   onReload: () => void;
 }) {
@@ -731,7 +744,7 @@ function WorkflowSection({
     <Section title="Workflow">
       {banner && <Banner message={banner} tone="danger" />}
 
-      {installation.status === 'NEW' && (
+      {installation.status === 'NEW' && canManage && (
         <View style={styles.workflowBlock}>
           <Select
             label="Assign to engineer"
@@ -760,22 +773,24 @@ function WorkflowSection({
         </View>
       )}
 
-      {installation.status === 'ASSIGNED' && (
+      {installation.status === 'ASSIGNED' && (isAssignee || canManage) && (
         <View style={styles.workflowBlock}>
-          {canFinish ? (
-            <Button
-              title="Finish installation"
-              icon="checkmark-circle-outline"
-              onPress={handleComplete}
-              loading={completing}
-            />
-          ) : (
-            <Text style={styles.workflowNote}>
-              {openAttempt
-                ? 'End the open attempt below before finishing.'
-                : 'Start and end at least one attempt below before finishing.'}
-            </Text>
-          )}
+          {/* Only the assigned engineer (or self-assigned manager) finishes. */}
+          {isAssignee &&
+            (canFinish ? (
+              <Button
+                title="Finish installation"
+                icon="checkmark-circle-outline"
+                onPress={handleComplete}
+                loading={completing}
+              />
+            ) : (
+              <Text style={styles.workflowNote}>
+                {openAttempt
+                  ? 'End the open attempt below before finishing.'
+                  : 'Start and end at least one attempt below before finishing.'}
+              </Text>
+            ))}
 
           {/* Not completed yet — a manager/admin can re-assign to another engineer. */}
           {canManage && (
@@ -874,10 +889,12 @@ function WorkflowSection({
 
 function SignoffSection({
   installation,
+  canAct,
   api,
   onReload,
 }: {
   installation: InstallationDetail;
+  canAct: boolean;
   api: ReturnType<typeof useApi>;
   onReload: () => void;
 }) {
@@ -1005,7 +1022,7 @@ function SignoffSection({
         <Text style={styles.signedInfo}>
           Signed by {resolution.customer_signer_name} · {formatDateTime(resolution.customer_signed_at)}
         </Text>
-      ) : (
+      ) : canAct ? (
         <Button
           title="Collect Customer Signature"
           variant="secondary"
@@ -1014,6 +1031,10 @@ function SignoffSection({
           loading={signingCustomer}
           style={{ marginBottom: spacing.sm }}
         />
+      ) : (
+        <Text style={[styles.signedInfo, { color: colors.inkSubtle, fontWeight: '400' }]}>
+          Awaiting customer signature.
+        </Text>
       )}
 
       <Divider style={{ marginVertical: spacing.md }} />
@@ -1024,7 +1045,7 @@ function SignoffSection({
         <Text style={styles.signedInfo}>
           Signed · {formatDateTime(resolution.engineer_signed_at)}
         </Text>
-      ) : (
+      ) : canAct ? (
         <Button
           title="Add Engineer Signature"
           variant="secondary"
@@ -1033,6 +1054,10 @@ function SignoffSection({
           loading={signingEngineer}
           style={{ marginBottom: spacing.sm }}
         />
+      ) : (
+        <Text style={[styles.signedInfo, { color: colors.inkSubtle, fontWeight: '400' }]}>
+          Awaiting engineer signature.
+        </Text>
       )}
 
       <Divider style={{ marginVertical: spacing.md }} />
@@ -1064,14 +1089,16 @@ function SignoffSection({
 
       <Divider style={{ marginVertical: spacing.md }} />
 
-      {/* PDF */}
-      <Button
-        title="View Installation PDF"
-        variant="ghost"
-        icon="document-outline"
-        onPress={handleViewPdf}
-        loading={pdfLoading}
-      />
+      {/* PDF — Admin/Manager or the assigned engineer only (backend gates it). */}
+      {canAct && (
+        <Button
+          title="View Installation PDF"
+          variant="ghost"
+          icon="document-outline"
+          onPress={handleViewPdf}
+          loading={pdfLoading}
+        />
+      )}
 
       {/* Signer name modal */}
       <Modal
