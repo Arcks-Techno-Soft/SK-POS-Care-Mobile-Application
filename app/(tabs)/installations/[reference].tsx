@@ -583,6 +583,10 @@ function WorkflowSection({
   const [selfAssigning, setSelfAssigning] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [salesRepId, setSalesRepId] = useState<string | null>(
+    installation.sales_rep ? String(installation.sales_rep.id) : null,
+  );
+  const [savingSalesRep, setSavingSalesRep] = useState(false);
 
   // Finishing requires at least one completed attempt and none still open.
   const openAttempt = installation.attempts.find((a) => !a.ended_at) ?? null;
@@ -593,6 +597,34 @@ function WorkflowSection({
     () => api.listEngineers(),
     [],
   );
+
+  // Sales reps for the "sourced by" picker — only Admin/Manager set one.
+  const { data: salesReps } = useQuery<User[]>(
+    () => (canManage ? api.listSalesReps() : Promise.resolve([])),
+    [canManage],
+  );
+
+  const salesRepOptions = [
+    { label: 'None', value: '' },
+    ...(salesReps ?? []).map((r) => ({ label: r.name, value: String(r.id) })),
+  ];
+
+  const handleSetSalesRep = async () => {
+    setBanner(null);
+    setSavingSalesRep(true);
+    try {
+      await api.setInstallationSalesRep(
+        installation.reference,
+        salesRepId ? Number(salesRepId) : null,
+      );
+      onReload();
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : (e as Error).message;
+      setBanner(msg);
+    } finally {
+      setSavingSalesRep(false);
+    }
+  };
 
   // Same-district engineers first, then least-busy; load + district in sublabel.
   const engineerOptions = [...(engineers ?? [])]
@@ -782,6 +814,31 @@ function WorkflowSection({
 
       {installation.status === 'CLOSED' && (
         <Text style={styles.workflowNote}>Installation is closed.</Text>
+      )}
+
+      {/* Sales representative — Admin/Manager credit who sourced the deal */}
+      {canManage && installation.status !== 'CLOSED' && (
+        <View style={styles.reassignBlock}>
+          <Select
+            label="Sales representative"
+            value={salesRepId}
+            onChange={(v) => setSalesRepId(v || null)}
+            options={salesRepOptions}
+            placeholder="None"
+            sheetTitle="Sales Representative"
+          />
+          <Button
+            title={installation.sales_rep ? 'Update sales rep' : 'Set sales rep'}
+            icon="briefcase-outline"
+            variant="secondary"
+            onPress={handleSetSalesRep}
+            loading={savingSalesRep}
+            disabled={
+              salesRepId ===
+              (installation.sales_rep ? String(installation.sales_rep.id) : null)
+            }
+          />
+        </View>
       )}
 
       {/* Timestamps */}

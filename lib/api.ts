@@ -628,6 +628,15 @@ export class Api {
     });
   }
 
+  setInstallationSalesRep(
+    reference: string,
+    salesRepId: number | null,
+  ): Promise<InstallationDetail> {
+    return this.request('PATCH', `/admin/installations/${reference}/sales-rep`, {
+      json: { sales_rep_id: salesRepId },
+    });
+  }
+
   installationEvents(reference: string): Promise<InstallationEvent[]> {
     return this.request('GET', `/admin/installations/${reference}/events`);
   }
