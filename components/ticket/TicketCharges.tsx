@@ -64,7 +64,6 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
   // (created before the feature) — those never show payment UI.
   // `payment_required` is computed by the backend (out-of-warranty, or covered
   // with charges). Out-of-warranty additionally requires a positive amount.
-  const outOfWarranty = ticket.warranty_status === 'OUT_OF_WARRANTY';
   const paymentPending =
     !!ticket.payment_required &&
     ticket.payment_status === 'PENDING' &&
@@ -78,6 +77,15 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
     user?.role === 'ADMIN' ||
     user?.role === 'MANAGER' ||
     ticket.assigned_engineer?.id === user?.id;
+  // Money breakdown for partial payments (falls back to the charges total when
+  // the backend hasn't sent the new fields yet, pre-deploy).
+  const amountDue = ticket.amount_due_inr ?? charges?.grand_total_inr ?? 0;
+  const amountCollected = ticket.amount_collected_inr ?? 0;
+  const amountPending =
+    ticket.amount_pending_inr ?? Math.max(0, amountDue - amountCollected);
+  // Remote-support tickets have no signatures, so the balance can be collected
+  // as soon as they're RESOLVED. Site visits collect after both signatures.
+  const canCollectNow = isRemote || bothSigned;
 
   return (
     <Section title={isRemote ? 'Service charge' : 'Spares & charges'}>
@@ -229,14 +237,23 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
                   <Badge label="Payment pending" tone="warn" />
                   <View style={{ flex: 1 }} />
                 </View>
+                <View style={{ marginTop: spacing.xs, gap: 2 }}>
+                  <Text style={styles.meta}>Total due: {formatINR(amountDue)}</Text>
+                  {amountCollected > 0 && (
+                    <Text style={styles.meta}>Collected: {formatINR(amountCollected)}</Text>
+                  )}
+                  <Text style={[styles.meta, { fontWeight: '700', color: colors.ink }]}>
+                    Pending: {formatINR(amountPending)}
+                  </Text>
+                </View>
                 <Text style={[styles.meta, { marginTop: spacing.xs }]}>
-                  {bothSigned
-                    ? 'Signed off — payment not collected. Record it to close the ticket.'
+                  {canCollectNow
+                    ? 'Collect the balance to close the ticket. Partial payments keep it open until paid in full.'
                     : 'Payment due — collect after sign-off.'}
                 </Text>
-                {bothSigned && canCollect && (
+                {canCollectNow && canCollect && (
                   <Button
-                    title="Mark payment collected"
+                    title="Collect payment"
                     icon="cash-outline"
                     onPress={() => setPayOpen(true)}
                     style={{ marginTop: spacing.sm }}
@@ -305,8 +322,9 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
       {/* Collect payment modal */}
       <CollectPaymentModal
         visible={payOpen}
-        defaultAmount={charges?.grand_total_inr ?? 0}
-        requirePositive={outOfWarranty}
+        due={amountDue}
+        collected={amountCollected}
+        pending={amountPending}
         onClose={() => setPayOpen(false)}
         onSave={async (amount) => {
           try {
@@ -484,15 +502,16 @@ function ServiceFeeModal({
 
 function CollectPaymentModal({
   visible,
-  defaultAmount,
-  requirePositive,
+  due,
+  collected,
+  pending,
   onClose,
   onSave,
 }: {
   visible: boolean;
-  defaultAmount: number;
-  /** Out-of-warranty must collect > ₹0; covered tickets may record ₹0. */
-  requirePositive: boolean;
+  due: number;
+  collected: number;
+  pending: number;
   onClose: () => void;
   onSave: (amount: number) => Promise<void>;
 }) {
@@ -503,19 +522,23 @@ function CollectPaymentModal({
   const [wasVisible, setWasVisible] = useState(false);
   if (visible && !wasVisible) {
     setWasVisible(true);
-    setValue(String(defaultAmount));
+    setValue(String(pending));
     setError(null);
   }
   if (!visible && wasVisible) setWasVisible(false);
 
+  const amount = Number(value);
+  const validAmount =
+    value.trim() !== '' && !isNaN(amount) && amount > 0 && amount <= pending;
+  const clearsBalance = validAmount && Math.round(amount) === pending;
+
   const submit = async () => {
-    const amount = Number(value);
-    if (value.trim() === '' || isNaN(amount) || amount < 0) {
-      setError('Enter a valid amount.');
+    if (value.trim() === '' || isNaN(amount) || amount <= 0) {
+      setError('Enter an amount greater than ₹0.');
       return;
     }
-    if (requirePositive && amount <= 0) {
-      setError('Enter an amount greater than ₹0.');
+    if (amount > pending) {
+      setError(`Amount can't exceed the ${formatINR(pending)} still pending.`);
       return;
     }
     setSaving(true);
@@ -535,9 +558,15 @@ function CollectPaymentModal({
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.sheetTitle}>Collect payment</Text>
-          <Text style={styles.sheetHint}>
-            Recording payment closes this ticket.
-          </Text>
+          <View style={{ gap: 2 }}>
+            <Text style={styles.sheetHint}>Total due: {formatINR(due)}</Text>
+            {collected > 0 && (
+              <Text style={styles.sheetHint}>Already collected: {formatINR(collected)}</Text>
+            )}
+            <Text style={[styles.sheetHint, { fontWeight: '700', color: colors.ink }]}>
+              Pending: {formatINR(pending)}
+            </Text>
+          </View>
           <Field
             label="Amount collected (₹)"
             value={value}
@@ -549,6 +578,11 @@ function CollectPaymentModal({
             keyboardType="number-pad"
             error={error ?? undefined}
           />
+          {validAmount && !clearsBalance && (
+            <Text style={styles.sheetHint}>
+              {formatINR(pending - Math.round(amount))} will remain pending — the ticket stays open until paid in full.
+            </Text>
+          )}
           <View style={styles.sheetActions}>
             <Button
               title="Cancel"
@@ -558,7 +592,7 @@ function CollectPaymentModal({
               style={{ flex: 1 }}
             />
             <Button
-              title="Collect & close"
+              title={clearsBalance ? 'Collect & close' : 'Collect'}
               loading={saving}
               fullWidth={false}
               onPress={submit}
