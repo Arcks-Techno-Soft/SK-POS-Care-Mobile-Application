@@ -511,8 +511,11 @@ export class Api {
 
   /* ---------------- engineers / users ---------------- */
 
+  // Includes SALES-role users so service calls + installations can be assigned
+  // to a sales rep as well as an engineer. Each carries its `role` so the picker
+  // can tag sales reps.
   listEngineers(): Promise<User[]> {
-    return this.request('GET', '/admin/engineers');
+    return this.request('GET', '/admin/engineers?include_sales_reps=true');
   }
 
   listSalesReps(): Promise<User[]> {
