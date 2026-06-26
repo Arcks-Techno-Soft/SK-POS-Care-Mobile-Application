@@ -645,7 +645,10 @@ function WorkflowSection({
     .map((e) => ({
       label: e.name,
       value: String(e.id),
-      sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
+      sublabel:
+        (e.role === 'SALES' ? 'Sales rep · ' : '') +
+        engineerLoadLabel(e.open_ticket_count) +
+        (e.district ? ` · ${e.district}` : ''),
     }));
 
   const handleAssign = async () => {
@@ -747,12 +750,12 @@ function WorkflowSection({
       {installation.status === 'NEW' && canManage && (
         <View style={styles.workflowBlock}>
           <Select
-            label="Assign to engineer"
+            label="Assign to"
             value={selectedEngineerId}
             onChange={setSelectedEngineerId}
             options={engineerOptions}
-            placeholder="Select engineer…"
-            sheetTitle="Select Engineer"
+            placeholder="Select an assignee…"
+            sheetTitle="Select Assignee"
           />
           <Button
             title="Assign"

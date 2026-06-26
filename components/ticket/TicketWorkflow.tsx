@@ -204,14 +204,17 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               </Text>
             )}
             <Select
-              label="Assign to engineer"
+              label="Assign to"
               value={pickedEngineer}
-              placeholder={loadingEngineers ? 'Loading engineers…' : 'Select an engineer…'}
-              sheetTitle="Engineers"
+              placeholder={loadingEngineers ? 'Loading…' : 'Select an assignee…'}
+              sheetTitle="Assignees"
               options={[...(engineers ?? [])].sort(byEngineerAvailability(ticket.city)).map((e) => ({
                 label: e.name,
                 value: String(e.id),
-                sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
+                sublabel:
+                  (e.role === 'SALES' ? 'Sales rep · ' : '') +
+                  engineerLoadLabel(e.open_ticket_count) +
+                  (e.district ? ` · ${e.district}` : ''),
               }))}
               onChange={setPickedEngineer}
             />

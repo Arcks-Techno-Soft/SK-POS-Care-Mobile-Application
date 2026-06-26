@@ -67,7 +67,10 @@ export default function NewInstallationScreen() {
 
   const engineerOptions = [
     { label: 'None (unassigned)', value: '' },
-    ...(engineers ?? []).map((e) => ({ label: e.name, value: String(e.id) })),
+    ...(engineers ?? []).map((e) => ({
+      label: e.role === 'SALES' ? `${e.name} (Sales rep)` : e.name,
+      value: String(e.id),
+    })),
   ];
 
   const salesRepOptions = [
@@ -367,11 +370,11 @@ export default function NewInstallationScreen() {
           <Text style={styles.sectionLabel}>Assignment (optional)</Text>
 
           <Select
-            label="Assign Engineer"
+            label="Assign to"
             value={assignedEngineerId}
             onChange={(v) => setAssignedEngineerId(v || null)}
             placeholder="None (unassigned)"
-            sheetTitle="Assign Engineer"
+            sheetTitle="Assign to"
             options={engineerOptions}
           />
         </>
