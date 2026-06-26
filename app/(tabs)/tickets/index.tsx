@@ -299,7 +299,7 @@ function TicketCard({
         </Text>
         {ticket.raised_by && (
           <Text style={styles.openedBy} numberOfLines={1}>
-            · Opened by {ticket.raised_by.name}
+            · Created by {ticket.raised_by.name}
           </Text>
         )}
       </View>

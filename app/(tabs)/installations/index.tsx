@@ -238,7 +238,7 @@ function InstallationCard({
           </Text>
           {installation.created_by && (
             <Text style={styles.openedBy} numberOfLines={1}>
-              · Opened by {installation.created_by.name}
+              · Created by {installation.created_by.name}
             </Text>
           )}
         </View>
