@@ -118,6 +118,7 @@ export interface TicketDetail {
   reference: string;
   business_name: string;
   contact_name: string;
+  contact_person_profile?: string | null;
   email: string | null;
   phone: string;
   business_type?: string;
@@ -182,6 +183,10 @@ export interface TicketListItem {
   id: number;
   reference: string;
   business_name: string;
+  // Customer contact + their role — used to tag customer-raised tickets
+  // ("Raised by customer — <name> — <profile>").
+  contact_name: string;
+  contact_person_profile?: string | null;
   city: string;
   state: string;
   product_category: string;

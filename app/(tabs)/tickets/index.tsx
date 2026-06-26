@@ -297,9 +297,14 @@ function TicketCard({
         <Text style={styles.assign}>
           {ticket.assigned_engineer ? ticket.assigned_engineer.name : 'Unassigned'}
         </Text>
-        {ticket.raised_by && (
+        {ticket.raised_by ? (
           <Text style={styles.openedBy} numberOfLines={1}>
-            · Opened by {ticket.raised_by.name}
+            · Created by {ticket.raised_by.name}
+          </Text>
+        ) : (
+          <Text style={styles.openedBy} numberOfLines={1}>
+            · Raised by customer — {ticket.contact_name}
+            {ticket.contact_person_profile ? ` — ${ticket.contact_person_profile}` : ''}
           </Text>
         )}
       </View>
