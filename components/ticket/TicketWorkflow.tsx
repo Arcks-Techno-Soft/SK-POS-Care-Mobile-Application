@@ -331,29 +331,90 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
             </Text>
           ))}
 
-        {ticket.status === 'RESOLVING' &&
-          (assignedToMe ? (
-            ticket.attempts.some((a) => !a.ended_at) ? (
-              <Text style={styles.muted}>End the open attempt below before resolving.</Text>
-            ) : ticket.attempts.filter((a) => a.ended_at).length === 0 ? (
-              <Text style={styles.muted}>Log at least one attempt below before resolving.</Text>
+        {ticket.status === 'RESOLVING' && (
+          <>
+            {assignedToMe ? (
+              ticket.attempts.some((a) => !a.ended_at) ? (
+                <Text style={styles.muted}>End the open attempt below before resolving.</Text>
+              ) : ticket.attempts.filter((a) => a.ended_at).length === 0 ? (
+                <Text style={styles.muted}>Log at least one attempt below before resolving.</Text>
+              ) : (
+                <Button
+                  title={isRemote ? 'Resolve & close' : 'Mark resolved'}
+                  icon="checkmark-done-outline"
+                  onPress={() => {
+                    setSummary('');
+                    setResolveError(null);
+                    setResolveOpen(true);
+                  }}
+                />
+              )
             ) : (
-              <Button
-                title={isRemote ? 'Resolve & close' : 'Mark resolved'}
-                icon="checkmark-done-outline"
-                onPress={() => {
-                  setSummary('');
-                  setResolveError(null);
-                  setResolveOpen(true);
-                }}
-              />
-            )
-          ) : (
-            <Text style={styles.muted}>
-              {ticket.assigned_engineer?.name ?? 'The engineer'} is working on this
-              ticket.
-            </Text>
-          ))}
+              <Text style={styles.muted}>
+                {ticket.assigned_engineer?.name ?? 'The engineer'} is working on this
+                ticket.
+              </Text>
+            )}
+
+            {/* A manager/admin can hand a mid-resolution ticket to another
+                engineer — but not while the current engineer still has an
+                attempt open, or that work would be orphaned. */}
+            {isManagerOrAdmin && (
+              <View style={styles.reassign}>
+                {ticket.attempts.some((a) => !a.ended_at) ? (
+                  <Text style={styles.reassignHint}>
+                    {ticket.assigned_engineer?.name ?? 'The current engineer'} has a
+                    work attempt still in progress. Ask them to end it before this
+                    ticket can be re-assigned.
+                  </Text>
+                ) : (
+                  <>
+                    <Text style={styles.reassignHint}>
+                      Re-assign this ticket to a different engineer if needed.
+                    </Text>
+                    <Select
+                      label="Re-assign to engineer"
+                      value={pickedEngineer}
+                      placeholder={
+                        loadingEngineers ? 'Loading engineers…' : 'Select an engineer…'
+                      }
+                      sheetTitle="Engineers"
+                      options={(engineers ?? [])
+                        .filter((e) => e.id !== ticket.assigned_engineer?.id)
+                        .sort(byEngineerAvailability(ticket.city))
+                        .map((e) => ({
+                          label: e.name,
+                          value: String(e.id),
+                          sublabel: engineerLoadLabel(e.open_ticket_count) + (e.district ? ` · ${e.district}` : ''),
+                        }))}
+                      onChange={setPickedEngineer}
+                    />
+                    {engineersError && (
+                      <View style={styles.engineersError}>
+                        <Text style={styles.muted}>{engineersError}</Text>
+                        <Button
+                          title="Retry"
+                          variant="secondary"
+                          size="sm"
+                          loading={loadingEngineers}
+                          onPress={loadEngineers}
+                        />
+                      </View>
+                    )}
+                    <Button
+                      title="Re-assign"
+                      icon="swap-horizontal-outline"
+                      variant="secondary"
+                      loading={busy}
+                      disabled={!pickedEngineer}
+                      onPress={confirmReassign}
+                    />
+                  </>
+                )}
+              </View>
+            )}
+          </>
+        )}
 
         {ticket.status === 'RESOLVED' && (
           <Text style={styles.muted}>Resolved — collect sign-off below.</Text>
