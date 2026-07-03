@@ -19,6 +19,7 @@ import TicketEvents from '@/components/ticket/TicketEvents';
 import TicketShipments from '@/components/ticket/TicketShipments';
 import TicketSignoff from '@/components/ticket/TicketSignoff';
 import TicketSubEngineers from '@/components/ticket/TicketSubEngineers';
+import TicketThirdParty from '@/components/ticket/TicketThirdParty';
 import TicketWorkflow from '@/components/ticket/TicketWorkflow';
 import AdminTicketActions from '@/components/ticket/AdminTicketActions';
 import { Badge, Button, Card, KeyValue } from '@/components/ui/kit';
@@ -59,6 +60,8 @@ export default function TicketDetailScreen() {
   const canEditMeta = user?.role === 'MANAGER' || user?.role === 'ADMIN';
   // Remote-support tickets skip signatures, PDF, spare parts and shipments.
   const isRemote = ticket?.service_type === 'REMOTE_SUPPORT';
+  // Third-party support: engineer-signature-only close, no spares/shipments.
+  const isThirdParty = ticket?.service_type === 'THIRD_PARTY_SUPPORT';
   // Service type can be set by Admin/Manager or the assigned engineer, until
   // the ticket is resolved/closed.
   const canEditServiceType =
@@ -327,9 +330,12 @@ export default function TicketDetailScreen() {
               reload();
             }}
           />
+          {isThirdParty && (
+            <TicketThirdParty reference={reference} ticket={ticket} reload={reload} />
+          )}
           <TicketSubEngineers reference={reference} ticket={ticket} reload={reload} />
           <TicketCharges reference={reference} ticket={ticket} reload={reload} />
-          {!isRemote && (
+          {!isRemote && !isThirdParty && (
             <TicketShipments reference={reference} ticket={ticket} reload={reload} />
           )}
           {!isRemote &&

@@ -38,8 +38,10 @@ export const WARRANTY_STATUSES: WarrantyStatus[] = [
 ];
 
 // How the ticket is serviced. SITE_VISIT is the default; REMOTE_SUPPORT skips
-// signatures, PDF and spare parts and closes in one Resolve & Close step.
-export const SERVICE_TYPES: ServiceType[] = ['SITE_VISIT', 'REMOTE_SUPPORT'];
+// signatures, PDF and spare parts and closes in one Resolve & Close step;
+// THIRD_PARTY_SUPPORT closes on the engineer signature alone (no customer
+// signature) and captures the third-party device details.
+export const SERVICE_TYPES: ServiceType[] = ['SITE_VISIT', 'REMOTE_SUPPORT', 'THIRD_PARTY_SUPPORT'];
 
 export const ASSIGNABLE_ROLES: Role[] = ['MANAGER', 'ENGINEER', 'SALES'];
 

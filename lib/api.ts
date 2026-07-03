@@ -369,6 +369,19 @@ export class Api {
     });
   }
 
+  updateThirdPartyInfo(
+    reference: string,
+    info: {
+      third_party_device_name: string;
+      third_party_issue_info: string;
+      third_party_ticket_ref: string;
+    },
+  ): Promise<TicketDetail> {
+    return this.request('PATCH', `/admin/tickets/${reference}/third-party-info`, {
+      json: info,
+    });
+  }
+
   signTicketCustomer(
     reference: string,
     signerName: string,

@@ -18,7 +18,7 @@ export type Severity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type WarrantyStatus = 'UNKNOWN' | 'UNDER_WARRANTY' | 'OUT_OF_WARRANTY' | 'AMC';
 
-export type ServiceType = 'SITE_VISIT' | 'REMOTE_SUPPORT';
+export type ServiceType = 'SITE_VISIT' | 'REMOTE_SUPPORT' | 'THIRD_PARTY_SUPPORT';
 
 export type InstallationStatus = 'NEW' | 'ASSIGNED' | 'COMPLETED' | 'CLOSED';
 
@@ -138,6 +138,10 @@ export interface TicketDetail {
   status: TicketStatus;
   warranty_status: WarrantyStatus;
   service_type: ServiceType;
+  // Third-party support details (only for THIRD_PARTY_SUPPORT tickets).
+  third_party_device_name?: string | null;
+  third_party_issue_info?: string | null;
+  third_party_ticket_ref?: string | null;
   // Payment tracking. payment_status null = legacy ticket (never gated).
   // payment_required is the backend-computed gate (OOW, or covered + charges).
   payment_status?: 'PENDING' | 'COLLECTED' | null;

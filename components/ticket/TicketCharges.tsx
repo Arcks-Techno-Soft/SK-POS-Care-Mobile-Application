@@ -59,6 +59,10 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
   const operable = ticketIsOperable(ticket.status);
   // Remote-support tickets carry no spare parts — show only the service fee.
   const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
+  const isThirdParty = ticket.service_type === 'THIRD_PARTY_SUPPORT';
+  // Both remote and third-party tickets carry no spare parts (service fee only).
+  const noSpares = isRemote || isThirdParty;
+  const engineerSigned = !!ticket.resolution?.engineer_signed_at;
 
   // Out-of-warranty payment tracking. payment_status is null on legacy tickets
   // (created before the feature) — those never show payment UI.
@@ -85,10 +89,10 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
     ticket.amount_pending_inr ?? Math.max(0, amountDue - amountCollected);
   // Remote-support tickets have no signatures, so the balance can be collected
   // as soon as they're RESOLVED. Site visits collect after both signatures.
-  const canCollectNow = isRemote || bothSigned;
+  const canCollectNow = isRemote || (isThirdParty ? engineerSigned : bothSigned);
 
   return (
-    <Section title={isRemote ? 'Service charge' : 'Spares & charges'}>
+    <Section title={noSpares ? 'Service charge' : 'Spares & charges'}>
       <View style={styles.body}>
         {chargesQuery.loading && !charges ? (
           <ActivityIndicator color={colors.inkMuted} style={{ marginVertical: spacing.md }} />
@@ -128,7 +132,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
             </>
 
             {/* Spare lines — not applicable to remote-support tickets. */}
-            {!isRemote &&
+            {!noSpares &&
               (charges.items.length === 0 ? (
                 <Text style={styles.empty}>No spare parts added.</Text>
               ) : (
@@ -165,10 +169,10 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
                 ))
               ))}
 
-            {!isRemote && <Divider style={{ marginVertical: spacing.md }} />}
+            {!noSpares && <Divider style={{ marginVertical: spacing.md }} />}
 
             {/* Totals */}
-            {!isRemote && (
+            {!noSpares && (
               <>
                 <TotalRow
                   label="Spares (list price)"
@@ -190,7 +194,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
               <View style={{ marginTop: spacing.sm }}>
                 <Banner
                   message={
-                    isRemote
+                    noSpares
                       ? 'Covered ticket (under warranty / AMC) — service charge waived (₹0).'
                       : 'Covered ticket (under warranty / AMC) — spares and service charge are waived (₹0).'
                   }
@@ -199,7 +203,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
               </View>
             )}
 
-            {!isRemote && (
+            {!noSpares && (
             <View style={{ marginTop: spacing.md }}>
               {operable ? (
                 <Button

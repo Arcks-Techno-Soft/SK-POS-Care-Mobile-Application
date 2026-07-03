@@ -44,6 +44,9 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
   const resolution = ticket.resolution;
   const customerSigned = !!resolution?.customer_signed_at;
   const engineerSigned = !!resolution?.engineer_signed_at;
+  // Third-party tickets close on the engineer signature alone — no customer
+  // signature, customer photo, or field sign-off link.
+  const isThirdParty = ticket.service_type === 'THIRD_PARTY_SUPPORT';
 
   // Customer photo is captured during the engineer sign-off step (the engineer
   // signature closes the ticket, so this is the last chance to attach it).
@@ -198,36 +201,40 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
 
         <Divider style={{ marginVertical: spacing.sm }} />
 
-        {/* Customer signature */}
-        <View style={styles.signRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Customer signature</Text>
-            {customerSigned ? (
-              <Text style={styles.signedText}>
-                Signed by {resolution?.customer_signer_name ?? 'customer'} ·{' '}
-                {formatDateTime(resolution?.customer_signed_at)}
-              </Text>
-            ) : (
-              <Text style={styles.pending}>Not signed yet.</Text>
+        {/* Customer signature — not used on third-party tickets */}
+        {!isThirdParty && (
+          <>
+            <View style={styles.signRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Customer signature</Text>
+                {customerSigned ? (
+                  <Text style={styles.signedText}>
+                    Signed by {resolution?.customer_signer_name ?? 'customer'} ·{' '}
+                    {formatDateTime(resolution?.customer_signed_at)}
+                  </Text>
+                ) : (
+                  <Text style={styles.pending}>Not signed yet.</Text>
+                )}
+              </View>
+              {customerSigned && <Badge label="Signed" tone="success" />}
+            </View>
+            {!customerSigned && (
+              <Button
+                title="Capture customer signature"
+                icon="create-outline"
+                variant="secondary"
+                loading={busy}
+                onPress={() => {
+                  setSignerName('');
+                  setNameError(null);
+                  setNameModalOpen(true);
+                }}
+              />
             )}
-          </View>
-          {customerSigned && <Badge label="Signed" tone="success" />}
-        </View>
-        {!customerSigned && (
-          <Button
-            title="Capture customer signature"
-            icon="create-outline"
-            variant="secondary"
-            loading={busy}
-            onPress={() => {
-              setSignerName('');
-              setNameError(null);
-              setNameModalOpen(true);
-            }}
-          />
-        )}
 
-        <Divider style={{ marginVertical: spacing.sm }} />
+            <Divider style={{ marginVertical: spacing.sm }} />
+          </>
+        )}
 
         {/* Engineer signature */}
         <View style={styles.signRow}>
@@ -258,61 +265,66 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
 
         <Divider style={{ marginVertical: spacing.sm }} />
 
-        {/* Customer photo — captured during engineer sign-off (read-only here) */}
-        <View style={styles.signRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.label}>Customer photo</Text>
-            {serverPhotoCaptured ? (
-              <Text style={styles.signedText}>
-                Captured · {formatDateTime(resolution?.customer_photo_captured_at)}
-              </Text>
-            ) : pendingPhoto ? (
-              <Text style={styles.signedText}>
-                {busy ? 'Uploading photo…' : 'Photo ready.'}
-              </Text>
+        {/* Customer photo + field sign-off link — not used on third-party */}
+        {!isThirdParty && (
+          <>
+            {/* Customer photo — captured during engineer sign-off (read-only here) */}
+            <View style={styles.signRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>Customer photo</Text>
+                {serverPhotoCaptured ? (
+                  <Text style={styles.signedText}>
+                    Captured · {formatDateTime(resolution?.customer_photo_captured_at)}
+                  </Text>
+                ) : pendingPhoto ? (
+                  <Text style={styles.signedText}>
+                    {busy ? 'Uploading photo…' : 'Photo ready.'}
+                  </Text>
+                ) : (
+                  <Text style={styles.pending}>
+                    {engineerSigned
+                      ? 'No photo captured.'
+                      : 'Captured when the engineer signs off.'}
+                  </Text>
+                )}
+              </View>
+              {serverPhotoCaptured && <Badge label="Added" tone="success" />}
+            </View>
+            {pendingPhoto ? (
+              <AttachmentGallery urls={[pendingPhoto.uri]} size={96} />
             ) : (
-              <Text style={styles.pending}>
-                {engineerSigned
-                  ? 'No photo captured.'
-                  : 'Captured when the engineer signs off.'}
-              </Text>
+              !!resolution?.customer_photo_url && (
+                <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
+              )
             )}
-          </View>
-          {serverPhotoCaptured && <Badge label="Added" tone="success" />}
-        </View>
-        {pendingPhoto ? (
-          <AttachmentGallery urls={[pendingPhoto.uri]} size={96} />
-        ) : (
-          !!resolution?.customer_photo_url && (
-            <AttachmentGallery urls={[resolution.customer_photo_url]} size={96} />
-          )
-        )}
 
-        <Divider style={{ marginVertical: spacing.sm }} />
+            <Divider style={{ marginVertical: spacing.sm }} />
 
-        {/* Field sign-off link */}
-        <Button
-          title="Generate field sign-off link"
-          icon="link-outline"
-          variant="secondary"
-          loading={busy}
-          onPress={generateLink}
-        />
-        {!!linkUrl && (
-          <View style={styles.linkBox}>
-            <Text style={styles.linkText} selectable numberOfLines={2}>
-              {linkUrl}
-            </Text>
+            {/* Field sign-off link */}
             <Button
-              title="Share link"
-              icon="share-outline"
-              size="sm"
-              onPress={() => shareLink(linkUrl)}
+              title="Generate field sign-off link"
+              icon="link-outline"
+              variant="secondary"
+              loading={busy}
+              onPress={generateLink}
             />
-          </View>
-        )}
+            {!!linkUrl && (
+              <View style={styles.linkBox}>
+                <Text style={styles.linkText} selectable numberOfLines={2}>
+                  {linkUrl}
+                </Text>
+                <Button
+                  title="Share link"
+                  icon="share-outline"
+                  size="sm"
+                  onPress={() => shareLink(linkUrl)}
+                />
+              </View>
+            )}
 
-        <Divider style={{ marginVertical: spacing.sm }} />
+            <Divider style={{ marginVertical: spacing.sm }} />
+          </>
+        )}
 
         {/* PDF */}
         <Button
@@ -396,13 +408,21 @@ export default function TicketSignoff({ reference, ticket, reload }: Props) {
         onConfirm={submitCustomerSignature}
       />
 
-      {/* Engineer signature pad — after signing, prompt for the customer photo */}
+      {/* Engineer signature pad — after signing, prompt for the customer photo
+          (site-visit); third-party closes on the engineer signature alone. */}
       <SignaturePad
         visible={engineerPadOpen}
         title="Engineer signature"
         caption={user?.name ? `Signing as ${user.name}` : undefined}
         onCancel={() => setEngineerPadOpen(false)}
-        onConfirm={promptCustomerPhoto}
+        onConfirm={
+          isThirdParty
+            ? (uri) => {
+                setEngineerPadOpen(false);
+                submitEngineerSignature(uri);
+              }
+            : promptCustomerPhoto
+        }
       />
     </Section>
   );
