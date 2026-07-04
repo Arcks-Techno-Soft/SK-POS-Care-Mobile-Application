@@ -16,7 +16,8 @@ export default function TabsLayout() {
 function TabsInner() {
   const { user } = useAuth();
   const { ticketCount, installCount } = usePendingTickets();
-  const isAdmin = user?.role === 'ADMIN';
+  // Analytics is available to Admins and Managers.
+  const canViewAnalytics = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   return (
     <Tabs
@@ -59,7 +60,7 @@ function TabsInner() {
         name="analytics"
         options={{
           title: 'Analytics',
-          href: isAdmin ? undefined : null,
+          href: canViewAnalytics ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart-outline" size={size} color={color} />
           ),

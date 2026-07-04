@@ -128,14 +128,14 @@ export default function AnalyticsScreen() {
     [days],
   );
 
-  if (user?.role !== 'ADMIN') {
+  if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Analytics' }} />
         <EmptyState
           icon="lock-closed-outline"
-          title="Admins only"
-          subtitle="The analytics dashboard is only available to owners."
+          title="Not available"
+          subtitle="The analytics dashboard is only available to admins and managers."
         />
       </Screen>
     );
