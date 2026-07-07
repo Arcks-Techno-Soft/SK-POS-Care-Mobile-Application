@@ -240,6 +240,14 @@ export class Api {
     return this.request('POST', '/tickets', { form });
   }
 
+  /**
+   * Distinct business names starting with `q`, from past tickets and
+   * installations — feeds the business-name autocomplete on staff forms.
+   */
+  suggestBusinessNames(q: string): Promise<string[]> {
+    return this.request('GET', '/admin/business-name-suggestions', { query: { q } });
+  }
+
   listTickets(params: {
     status?: string;
     severity?: string;

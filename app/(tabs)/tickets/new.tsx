@@ -11,6 +11,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { BusinessNameField } from '@/components/BusinessNameField';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { Screen } from '@/components/Screen';
 import { Banner, Button, Field } from '@/components/ui/kit';
@@ -185,14 +186,12 @@ export default function NewTicketScreen() {
 
       <Text style={styles.sectionLabel}>Business</Text>
 
-      <Field
-        label="Business Name"
+      <BusinessNameField
         required
         value={businessName}
         onChangeText={setBusinessName}
         placeholder="e.g. Spice Garden Restaurant"
         error={errors.businessName}
-        autoCapitalize="words"
       />
 
       <Field

@@ -3,6 +3,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BusinessNameField } from '@/components/BusinessNameField';
 import { Screen } from '@/components/Screen';
 import { Banner, Button, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
@@ -191,14 +192,12 @@ export default function NewInstallationScreen() {
 
       <Text style={styles.sectionLabel}>Business Details</Text>
 
-      <Field
-        label="Business Name"
+      <BusinessNameField
         required
         value={businessName}
         onChangeText={setBusinessName}
         placeholder="e.g. Spice Garden Restaurant"
         error={errors.businessName}
-        autoCapitalize="words"
       />
 
       <Select
