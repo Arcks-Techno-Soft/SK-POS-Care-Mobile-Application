@@ -3,8 +3,10 @@
  *
  * Debounced (300ms, min 2 chars) lookup of distinct business names from past
  * tickets + installations, so staff reuse one spelling per customer instead
- * of creating near-duplicates. Free typing is always allowed — suggestions
- * are a convenience, never a constraint, and a failed lookup is ignored.
+ * of creating near-duplicates. Each suggestion carries its category, so
+ * picking one can also pre-fill the business type via `onSelectSuggestion`.
+ * Free typing is always allowed — suggestions are a convenience, never a
+ * constraint, and a failed lookup is ignored.
  */
 
 import { useEffect, useState } from 'react';
@@ -13,10 +15,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Field } from '@/components/ui/kit';
 import { useApi } from '@/lib/auth';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
+import type { BusinessSuggestion } from '@/lib/types';
 
 type Props = {
   value: string;
   onChangeText: (v: string) => void;
+  /** Called when a suggestion is tapped, so the screen can pre-fill the category. */
+  onSelectSuggestion?: (s: BusinessSuggestion) => void;
   label?: string;
   required?: boolean;
   placeholder?: string;
@@ -26,13 +31,14 @@ type Props = {
 export function BusinessNameField({
   value,
   onChangeText,
+  onSelectSuggestion,
   label = 'Business Name',
   required,
   placeholder,
   error,
 }: Props) {
   const api = useApi();
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<BusinessSuggestion[]>([]);
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
@@ -45,9 +51,12 @@ export function BusinessNameField({
     const timer = setTimeout(() => {
       api
         .suggestBusinessNames(q)
-        .then((names) => {
+        .then((hits) => {
           // Dropping exact matches is also what closes the list after a pick.
-          if (!stale) setSuggestions(names.filter((n) => n.toLowerCase() !== q.toLowerCase()));
+          if (!stale)
+            setSuggestions(
+              hits.filter((h) => h.business_name.toLowerCase() !== q.toLowerCase()),
+            );
         })
         .catch(() => {
           if (!stale) setSuggestions([]);
@@ -75,11 +84,12 @@ export function BusinessNameField({
       />
       {focused && suggestions.length > 0 && (
         <View style={styles.list}>
-          {suggestions.map((name) => (
+          {suggestions.map((s) => (
             <Pressable
-              key={name}
+              key={s.business_name}
               onPress={() => {
-                onChangeText(name);
+                onChangeText(s.business_name);
+                onSelectSuggestion?.(s);
                 setSuggestions([]);
               }}
               style={({ pressed }) => [
@@ -88,8 +98,13 @@ export function BusinessNameField({
               ]}
             >
               <Text style={styles.itemText} numberOfLines={1}>
-                {name}
+                {s.business_name}
               </Text>
+              {!!s.business_type && (
+                <Text style={styles.itemMeta} numberOfLines={1}>
+                  {s.business_type}
+                </Text>
+              )}
             </Pressable>
           ))}
         </View>
@@ -108,10 +123,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
-  itemText: { fontSize: fontSize.md, color: colors.ink },
+  itemText: { flexShrink: 1, fontSize: fontSize.md, color: colors.ink },
+  itemMeta: { flexShrink: 0, fontSize: fontSize.xs, color: colors.inkSubtle },
 });

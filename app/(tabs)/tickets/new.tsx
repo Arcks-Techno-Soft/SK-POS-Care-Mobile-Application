@@ -190,6 +190,19 @@ export default function NewTicketScreen() {
         required
         value={businessName}
         onChangeText={setBusinessName}
+        onSelectSuggestion={(s) => {
+          // Pre-fill the category from the picked business. A stored value not
+          // in our preset list came in via "Other" — restore it that way.
+          const type = s.business_type?.trim();
+          if (!type) return;
+          if ((BUSINESS_TYPES as readonly string[]).includes(type)) {
+            setBusinessType(type);
+            setBusinessTypeOther('');
+          } else {
+            setBusinessType('Other');
+            setBusinessTypeOther(type);
+          }
+        }}
         placeholder="e.g. Spice Garden Restaurant"
         error={errors.businessName}
       />

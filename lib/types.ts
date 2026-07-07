@@ -493,3 +493,10 @@ export interface DuplicateInfo {
   hours_until_new_allowed: number;
   message: string;
 }
+
+/** A business-name autocomplete hit: the name plus the category last recorded
+ *  for it (may be an empty string if none was ever stored). */
+export interface BusinessSuggestion {
+  business_name: string;
+  business_type: string;
+}

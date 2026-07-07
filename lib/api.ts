@@ -8,6 +8,7 @@
 
 import type {
   Analytics,
+  BusinessSuggestion,
   ChargesSummary,
   ClosePreview,
   FieldSignLink,
@@ -244,7 +245,7 @@ export class Api {
    * Distinct business names starting with `q`, from past tickets and
    * installations — feeds the business-name autocomplete on staff forms.
    */
-  suggestBusinessNames(q: string): Promise<string[]> {
+  suggestBusinessNames(q: string): Promise<BusinessSuggestion[]> {
     return this.request('GET', '/admin/business-name-suggestions', { query: { q } });
   }
 

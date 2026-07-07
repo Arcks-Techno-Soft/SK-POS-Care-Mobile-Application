@@ -196,6 +196,14 @@ export default function NewInstallationScreen() {
         required
         value={businessName}
         onChangeText={setBusinessName}
+        onSelectSuggestion={(s) => {
+          // Category is a fixed-option picker here (no free-text), so only
+          // pre-fill when the stored category is one of our preset types.
+          const type = s.business_type?.trim();
+          if (type && (BUSINESS_TYPES as readonly string[]).includes(type)) {
+            setBusinessCategory(type);
+          }
+        }}
         placeholder="e.g. Spice Garden Restaurant"
         error={errors.businessName}
       />
