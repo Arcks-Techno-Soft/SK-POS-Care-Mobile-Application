@@ -45,9 +45,18 @@ function errMsg(e: unknown): string {
 export default function TicketCharges({ reference, ticket, reload }: Props) {
   const api = useApi();
   const { user } = useAuth();
+  // Refetch charges whenever the ticket's charge-affecting fields change (a
+  // warranty/service-type/resolve action reloads the ticket) so this card can't
+  // drift from the payment section, which reads ticket.amount_due_inr.
   const chargesQuery = useQuery<ChargesSummary>(
     () => api.getCharges(reference),
-    [reference],
+    [
+      reference,
+      ticket.amount_due_inr,
+      ticket.warranty_status,
+      ticket.service_type,
+      ticket.status,
+    ],
   );
 
   const [feeOpen, setFeeOpen] = useState(false);
@@ -281,6 +290,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
             await api.updateServiceFee(reference, fee);
             setFeeOpen(false);
             chargesQuery.reload();
+            reload(); // refresh the ticket so the payment section matches
           } catch (e) {
             Alert.alert('Charges', errMsg(e));
             throw e;

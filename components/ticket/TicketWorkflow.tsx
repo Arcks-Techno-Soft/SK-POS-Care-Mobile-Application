@@ -189,11 +189,16 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
       setResolveError('Please write at least 10 characters.');
       return;
     }
-    // Confirm the service charge: non-Admins are held at the ticket minimum;
-    // an Admin can go lower.
+    // Confirm the service charge. Reject a below-minimum amount instead of
+    // silently accepting it — only an Admin may go below the floor.
     const min = resolveCharges?.service_fee_min_inr ?? 0;
-    const floor = isAdmin ? 0 : min;
-    const fee = Math.max(floor, Math.round(Number(feeDraft) || 0));
+    const fee = Math.round(Number(feeDraft) || 0);
+    if (!isAdmin && min > 0 && fee < min) {
+      setResolveError(
+        `Service charge can't be below ₹${min.toLocaleString('en-IN')}. Only an Admin can set lower.`,
+      );
+      return;
+    }
     setResolving(true);
     setResolveError(null);
     try {
