@@ -14,7 +14,7 @@ import { formatDateTime } from '@/lib/format';
 import { byEngineerAvailability, engineerLoadLabel } from '@/lib/options';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
-import type { TicketDetail, User } from '@/lib/types';
+import type { ChargesSummary, TicketDetail, User } from '@/lib/types';
 
 interface Props {
   reference: string;
@@ -44,6 +44,26 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const [summary, setSummary] = useState('');
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
+  // Charges shown for a final confirm at resolve time. Fetched when the modal
+  // opens so the engineer confirms the exact service charge being billed.
+  const [resolveCharges, setResolveCharges] = useState<ChargesSummary | null>(null);
+  const [feeDraft, setFeeDraft] = useState('');
+  const isAdmin = user?.role === 'ADMIN';
+
+  const openResolve = async () => {
+    setSummary('');
+    setResolveError(null);
+    setResolveCharges(null);
+    setFeeDraft('');
+    setResolveOpen(true);
+    try {
+      const c = await api.getCharges(reference);
+      setResolveCharges(c);
+      setFeeDraft(String(c.service_fee_inr));
+    } catch {
+      // Non-blocking — the engineer can still resolve; charge stays as-is.
+    }
+  };
 
   const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
   const assignedToMe =
@@ -169,9 +189,19 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
       setResolveError('Please write at least 10 characters.');
       return;
     }
+    // Confirm the service charge: non-Admins are held at the ticket minimum;
+    // an Admin can go lower.
+    const min = resolveCharges?.service_fee_min_inr ?? 0;
+    const floor = isAdmin ? 0 : min;
+    const fee = Math.max(floor, Math.round(Number(feeDraft) || 0));
     setResolving(true);
     setResolveError(null);
     try {
+      // Persist the confirmed charge first (only if it changed), so the
+      // resolution/PDF reflects exactly what was confirmed.
+      if (resolveCharges && fee !== resolveCharges.service_fee_inr) {
+        await api.updateServiceFee(reference, fee);
+      }
       await api.resolveTicket(reference, summary.trim());
       setResolveOpen(false);
       setSummary('');
@@ -342,11 +372,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                 <Button
                   title={isRemote ? 'Resolve & close' : 'Mark resolved'}
                   icon="checkmark-done-outline"
-                  onPress={() => {
-                    setSummary('');
-                    setResolveError(null);
-                    setResolveOpen(true);
-                  }}
+                  onPress={openResolve}
                 />
               )
             ) : (
@@ -542,6 +568,25 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               placeholder="Resolution summary…"
               multiline
               error={resolveError ?? undefined}
+            />
+            {/* Confirm the service charge — the amount billed on resolution.
+                Editable as a final check; only committed on Confirm. */}
+            <Field
+              label="Service charge (₹)"
+              value={feeDraft}
+              onChangeText={(t) => {
+                setFeeDraft(t);
+                if (resolveError) setResolveError(null);
+              }}
+              placeholder="0"
+              keyboardType="number-pad"
+              hint={
+                (resolveCharges?.service_fee_min_inr ?? 0) > 0
+                  ? `Minimum ₹${resolveCharges!.service_fee_min_inr.toLocaleString('en-IN')}${
+                      isAdmin ? ' · you can set lower' : ''
+                    }`
+                  : undefined
+              }
             />
             <View style={styles.sheetActions}>
               <Button
