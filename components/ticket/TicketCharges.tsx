@@ -273,6 +273,8 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
       <ServiceFeeModal
         visible={feeOpen}
         current={charges?.service_fee_inr ?? 0}
+        min={charges?.service_fee_min_inr ?? 0}
+        canWaiveBelowMin={user?.role === 'ADMIN'}
         onClose={() => setFeeOpen(false)}
         onSave={async (fee) => {
           try {
@@ -425,11 +427,17 @@ function TotalRow({
 function ServiceFeeModal({
   visible,
   current,
+  min,
+  canWaiveBelowMin,
   onClose,
   onSave,
 }: {
   visible: boolean;
   current: number;
+  // Minimum service fee for this ticket (0 = no floor).
+  min: number;
+  // When true (Admin), the fee may be set below the minimum.
+  canWaiveBelowMin: boolean;
   onClose: () => void;
   onSave: (fee: number) => Promise<void>;
 }) {
@@ -449,6 +457,11 @@ function ServiceFeeModal({
     const fee = Number(value);
     if (value.trim() === '' || isNaN(fee) || fee < 0) {
       setError('Enter a valid fee amount.');
+      return;
+    }
+    // Out-of-warranty tickets carry a minimum; only an Admin can go below it.
+    if (min > 0 && fee < min && !canWaiveBelowMin) {
+      setError(`Minimum is ₹${min.toLocaleString('en-IN')}. Only an Admin can set lower.`);
       return;
     }
     setSaving(true);
@@ -478,6 +491,13 @@ function ServiceFeeModal({
             placeholder="0"
             keyboardType="number-pad"
             error={error ?? undefined}
+            hint={
+              min > 0
+                ? `Minimum ₹${min.toLocaleString('en-IN')}${
+                    canWaiveBelowMin ? ' · Admin can set lower' : ''
+                  }`
+                : undefined
+            }
           />
           <View style={styles.sheetActions}>
             <Button
