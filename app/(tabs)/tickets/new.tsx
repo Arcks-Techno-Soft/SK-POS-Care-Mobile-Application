@@ -63,10 +63,14 @@ export default function NewTicketScreen() {
 
   // Product
   const [productCategory, setProductCategory] = useState<string | null>(null);
+  // Free-text category, used only when productCategory === 'Other'.
+  const [productCategoryOther, setProductCategoryOther] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
 
   // Issue
   const [issueCategory, setIssueCategory] = useState<string | null>(null);
+  // Free-text category, used only when issueCategory === 'Other'.
+  const [issueCategoryOther, setIssueCategoryOther] = useState('');
   const [description, setDescription] = useState('');
   const [preferredContactTime, setPreferredContactTime] = useState<string | null>(null);
 
@@ -97,9 +101,13 @@ export default function NewTicketScreen() {
     if (!PINCODE_RE.test(pincode.trim())) errs.pincode = 'Enter a valid pincode (digits only).';
 
     if (!productCategory) errs.productCategory = 'Select a product category.';
+    else if (productCategory === 'Other' && productCategoryOther.trim().length < 2)
+      errs.productCategoryOther = 'Please specify the product category.';
     if (serialNumber.trim().length < 3) errs.serialNumber = 'Enter the product serial number.';
 
     if (!issueCategory) errs.issueCategory = 'Select an issue category.';
+    else if (issueCategory === 'Other' && issueCategoryOther.trim().length < 2)
+      errs.issueCategoryOther = 'Please specify the issue category.';
     if (description.trim().length < 20)
       errs.description = 'Please describe the issue in at least 20 characters.';
 
@@ -125,9 +133,15 @@ export default function NewTicketScreen() {
         city: city.trim(),
         state: stateName!,
         pincode: pincode.trim(),
-        product_category: productCategory!,
+        product_category:
+          productCategory === 'Other' && productCategoryOther.trim()
+            ? productCategoryOther.trim()
+            : productCategory!,
         serial_number: serialNumber.trim(),
-        issue_category: issueCategory!,
+        issue_category:
+          issueCategory === 'Other' && issueCategoryOther.trim()
+            ? issueCategoryOther.trim()
+            : issueCategory!,
         description: description.trim(),
       };
       if (email.trim()) body.email = email.trim();
@@ -334,6 +348,18 @@ export default function NewTicketScreen() {
         <Text style={styles.fieldError}>{errors.productCategory}</Text>
       )}
 
+      {productCategory === 'Other' && (
+        <Field
+          label="Specify product category"
+          required
+          value={productCategoryOther}
+          onChangeText={setProductCategoryOther}
+          placeholder="Please specify the product category"
+          autoCapitalize="words"
+          error={errors.productCategoryOther}
+        />
+      )}
+
       <Field
         label="Serial number"
         required
@@ -358,6 +384,18 @@ export default function NewTicketScreen() {
         options={ISSUE_CATEGORIES.map((i) => ({ label: i, value: i }))}
       />
       {!!errors.issueCategory && <Text style={styles.fieldError}>{errors.issueCategory}</Text>}
+
+      {issueCategory === 'Other' && (
+        <Field
+          label="Specify issue category"
+          required
+          value={issueCategoryOther}
+          onChangeText={setIssueCategoryOther}
+          placeholder="Please specify the issue category"
+          autoCapitalize="words"
+          error={errors.issueCategoryOther}
+        />
+      )}
 
       <Field
         label="Describe the issue"

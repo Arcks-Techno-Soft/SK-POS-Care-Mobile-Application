@@ -33,6 +33,8 @@ export default function NewInstallationScreen() {
 
   const [businessName, setBusinessName] = useState('');
   const [businessCategory, setBusinessCategory] = useState('');
+  // Free-text category, used only when businessCategory === 'Other'.
+  const [businessCategoryOther, setBusinessCategoryOther] = useState('');
   const [contactName, setContactName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -83,6 +85,8 @@ export default function NewInstallationScreen() {
     const errs: Record<string, string> = {};
     if (!businessName.trim()) errs.businessName = 'Business name is required.';
     if (!businessCategory.trim()) errs.businessCategory = 'Business category is required.';
+    else if (businessCategory === 'Other' && businessCategoryOther.trim().length < 2)
+      errs.businessCategoryOther = 'Please specify the business category.';
     if (!contactName.trim()) errs.contactName = 'Contact name is required.';
     if (!phone.trim()) errs.phone = 'Phone number is required.';
     if (invoiceMode === 'enter' && !invoiceNumber.trim())
@@ -138,7 +142,10 @@ export default function NewInstallationScreen() {
         sales_rep_id?: number;
       } = {
         business_name: businessName.trim(),
-        business_category: businessCategory.trim(),
+        business_category:
+          businessCategory === 'Other' && businessCategoryOther.trim()
+            ? businessCategoryOther.trim()
+            : businessCategory.trim(),
         contact_name: contactName.trim(),
         phone: phone.trim(),
         invoice_number:
@@ -219,6 +226,18 @@ export default function NewInstallationScreen() {
       />
       {!!errors.businessCategory && (
         <Text style={styles.fieldError}>{errors.businessCategory}</Text>
+      )}
+
+      {businessCategory === 'Other' && (
+        <Field
+          label="Specify business category"
+          required
+          value={businessCategoryOther}
+          onChangeText={setBusinessCategoryOther}
+          placeholder="Please specify the business category"
+          autoCapitalize="words"
+          error={errors.businessCategoryOther}
+        />
       )}
 
       <Text style={styles.sectionLabel}>Contact</Text>
