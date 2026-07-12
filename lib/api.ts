@@ -255,6 +255,7 @@ export class Api {
     product?: string;
     search?: string;
     created_within_days?: number;
+    assigned_engineer_id?: number;
     limit?: number;
     offset?: number;
   }): Promise<Page<TicketListItem>> {
@@ -611,6 +612,7 @@ export class Api {
     status?: string;
     search?: string;
     created_within_days?: number;
+    assigned_engineer_id?: number;
     limit?: number;
     offset?: number;
   }): Promise<Page<InstallationListItem>> {

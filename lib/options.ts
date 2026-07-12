@@ -126,20 +126,31 @@ export const INDIAN_STATES = [
 ];
 
 /** Caption describing an engineer's current workload for the assign picker.
- *  Workload = open tickets + pending installations (see backend EngineerOption). */
-export function engineerLoadLabel(count?: number | null): string {
+ *  Workload = open tickets + pending installations (see backend EngineerOption).
+ *  Managers are assignable but are a fallback (not the default pick), so pass
+ *  `recommendable = false` for them to suppress the "recommended" wording. */
+export function engineerLoadLabel(count?: number | null, recommendable = true): string {
   const n = count ?? 0;
-  return n === 0
-    ? 'Available — recommended'
-    : `${n} open job${n === 1 ? '' : 's'}`;
+  if (n === 0) return recommendable ? 'Available — recommended' : 'No open jobs';
+  return `${n} open job${n === 1 ? '' : 's'}`;
 }
 
-type EngineerLike = { open_ticket_count?: number; district?: string | null; name: string };
+type EngineerLike = {
+  open_ticket_count?: number;
+  district?: string | null;
+  name: string;
+  role?: string;
+};
+
+/** Managers can be assigned (they sometimes work jobs themselves) but sink
+ *  below engineers/sales in the picker so engineers stay the default pick. */
+const isManagerRole = (e: EngineerLike) => (e.role ?? '').toUpperCase() === 'MANAGER';
 
 /** Returns a comparator that sorts engineers for the assign picker:
  *  1. engineers whose district matches the job's area first (case-insensitive),
- *  2. then least-busy (fewest open tickets + installations),
- *  3. then alphabetically.
+ *  2. non-managers before managers (managers are a fallback assignee),
+ *  3. then least-busy (fewest open tickets + installations),
+ *  4. then alphabetically.
  *  Pass the job's city (tickets/installations carry no district field). */
 export function byEngineerAvailability(targetArea?: string | null) {
   const target = targetArea?.trim().toLowerCase() || null;
@@ -149,6 +160,9 @@ export function byEngineerAvailability(targetArea?: string | null) {
       const bLocal = (b.district ?? '').trim().toLowerCase() === target ? 0 : 1;
       if (aLocal !== bLocal) return aLocal - bLocal;
     }
+    const aMgr = isManagerRole(a) ? 1 : 0;
+    const bMgr = isManagerRole(b) ? 1 : 0;
+    if (aMgr !== bMgr) return aMgr - bMgr;
     return (
       (a.open_ticket_count ?? 0) - (b.open_ticket_count ?? 0) || a.name.localeCompare(b.name)
     );

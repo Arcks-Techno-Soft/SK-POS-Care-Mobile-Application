@@ -5,8 +5,10 @@
  *   - ENGINEER: tickets/installations assigned to ME that I haven't accepted /
  *     actioned yet (status ASSIGNED) — i.e. "waiting on me".
  *   - ADMIN / MANAGER: tickets/installations NOT assigned to anyone yet — i.e.
- *     "needs assignment". For tickets that's OPEN + ACKNOWLEDGED; for
- *     installations that's NEW.
+ *     "needs assignment" (tickets OPEN + ACKNOWLEDGED, installations NEW) —
+ *     PLUS anything assigned to them personally and still awaiting their
+ *     acceptance (status ASSIGNED), since a manager can be an assignee and work
+ *     it like an engineer.
  *
  * Counts refresh when: the user logs in, the app returns to the foreground, a
  * push notification arrives, after a workflow action via refresh(), and on a
@@ -63,14 +65,20 @@ export function PendingTicketsProvider({ children }: { children: ReactNode }) {
         setTicketCount(t.total);
         setInstallCount(i.total);
       } else {
-        // Admin / Manager: unassigned items that still need an engineer.
-        const [open, ack, instNew] = await Promise.all([
+        // Admin / Manager: unassigned items that still need an engineer, PLUS
+        // anything assigned to ME awaiting my acceptance — a Manager can be
+        // assigned a ticket/installation and works it like an engineer, so those
+        // need to nudge them too (the list endpoints don't scope managers to
+        // their own rows, hence the explicit assigned_engineer_id filter).
+        const [open, ack, instNew, mineT, mineI] = await Promise.all([
           api.listTickets({ status: 'OPEN', limit: 1 }),
           api.listTickets({ status: 'ACKNOWLEDGED', limit: 1 }),
           api.listInstallations({ status: 'NEW', limit: 1 }),
+          api.listTickets({ status: 'ASSIGNED', assigned_engineer_id: user.id, limit: 1 }),
+          api.listInstallations({ status: 'ASSIGNED', assigned_engineer_id: user.id, limit: 1 }),
         ]);
-        setTicketCount(open.total + ack.total);
-        setInstallCount(instNew.total);
+        setTicketCount(open.total + ack.total + mineT.total);
+        setInstallCount(instNew.total + mineI.total);
       }
     } catch {
       // best-effort — keep previous counts

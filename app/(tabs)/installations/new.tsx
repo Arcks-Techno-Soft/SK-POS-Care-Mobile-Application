@@ -71,7 +71,12 @@ export default function NewInstallationScreen() {
   const engineerOptions = [
     { label: 'None (unassigned)', value: '' },
     ...(engineers ?? []).map((e) => ({
-      label: e.role === 'SALES' ? `${e.name} (Sales rep)` : e.name,
+      label:
+        e.role === 'MANAGER'
+          ? `${e.name} (Manager)`
+          : e.role === 'SALES'
+            ? `${e.name} (Sales rep)`
+            : e.name,
       value: String(e.id),
     })),
   ];
