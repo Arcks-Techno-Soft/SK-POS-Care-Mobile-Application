@@ -3,7 +3,7 @@
  * Field names match the JSON the backend returns exactly.
  */
 
-export type Role = 'ADMIN' | 'MANAGER' | 'ENGINEER' | 'SALES';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'ENGINEER' | 'SALES';
 
 export type TicketStatus =
   | 'OPEN'

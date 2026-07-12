@@ -20,6 +20,7 @@ import { Badge, Banner, Button, Divider, Field } from '@/components/ui/kit';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
+import { isAdminLevel } from '@/lib/options';
 import { pickFromLibrary, takePhoto } from '@/lib/images';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type { PickedImage, TicketDetail } from '@/lib/types';
@@ -39,7 +40,7 @@ function errMsg(e: unknown): string {
 export default function TicketSignoff({ reference, ticket, reload }: Props) {
   const api = useApi();
   const { user } = useAuth();
-  const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  const isManagerOrAdmin = user?.role === 'MANAGER' || isAdminLevel(user?.role);
 
   const resolution = ticket.resolution;
   const customerSigned = !!resolution?.customer_signed_at;

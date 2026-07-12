@@ -10,6 +10,7 @@ import { Section } from '@/components/ui/Section';
 import { Badge, Banner, Button, Field } from '@/components/ui/kit';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
+import { isAdminLevel } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
 import type { TicketDetail } from '@/lib/types';
 
@@ -31,7 +32,7 @@ export default function TicketThirdParty({ reference, ticket, reload }: Props) {
 
   const canEdit =
     (user?.role === 'MANAGER' ||
-      user?.role === 'ADMIN' ||
+      isAdminLevel(user?.role) ||
       ticket.assigned_engineer?.id === user?.id) &&
     ticket.status !== 'CLOSED';
 

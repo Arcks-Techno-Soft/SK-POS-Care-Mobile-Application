@@ -32,6 +32,7 @@ import {
   byEngineerAvailability,
   engineerLoadLabel,
   INDIAN_STATES,
+  isAdminLevel,
   prettyEnum,
   roleLabel,
 } from '@/lib/options';
@@ -64,7 +65,7 @@ export default function InstallationDetailScreen() {
     refreshPending();
   };
 
-  const canManage = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  const canManage = user?.role === 'MANAGER' || isAdminLevel(user?.role);
   // The assigned engineer (or a self-assigned manager) — the only non-manager
   // who may act on the installation. Everyone else (e.g. SALES) is view-only.
   const isAssignee =

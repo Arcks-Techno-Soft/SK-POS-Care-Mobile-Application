@@ -24,15 +24,16 @@ import { Avatar, Badge, Banner, Button, Card, Divider, Field } from '@/component
 import { Select } from '@/components/ui/Select';
 import { useApi, useAuth } from '@/lib/auth';
 import { useQuery } from '@/lib/hooks';
-import { ASSIGNABLE_ROLES, roleLabel } from '@/lib/options';
+import { CREATABLE_ROLES, isSuperAdmin, roleLabel } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
-import type { User } from '@/lib/types';
+import type { Role, User } from '@/lib/types';
 
 /* ---------- username validation ---------- */
 const USERNAME_RE = /^[a-z0-9._-]{3,50}$/;
 
 /* ---------- role options ---------- */
-const ROLE_OPTIONS = ASSIGNABLE_ROLES.map((r) => ({ label: roleLabel(r), value: r }));
+// Super Admin can create/assign any tier, including ADMIN and SUPER_ADMIN.
+const ROLE_OPTIONS = CREATABLE_ROLES.map((r) => ({ label: roleLabel(r), value: r }));
 
 /* ---------- user card ---------- */
 
@@ -43,6 +44,8 @@ function UserCard({
   toggling,
   onToggleSalesRep,
   togglingSalesRep,
+  onChangeRole,
+  changingRole,
 }: {
   user: User;
   currentUserId: number;
@@ -50,6 +53,8 @@ function UserCard({
   toggling: boolean;
   onToggleSalesRep: (user: User) => void;
   togglingSalesRep: boolean;
+  onChangeRole: (user: User, role: string) => void;
+  changingRole: boolean;
 }) {
   const isSelf = user.id === currentUserId;
   const tone = user.active ? 'success' : 'neutral';
@@ -128,6 +133,17 @@ function UserCard({
           />
         </>
       )}
+
+      {/* Super Admin only: change this user's role. */}
+      <Divider style={styles.cardDivider} />
+      <Select
+        label="Role"
+        value={user.role}
+        options={ROLE_OPTIONS}
+        onChange={(v) => onChangeRole(user, v)}
+        disabled={changingRole}
+        sheetTitle={`Change ${user.name}'s role`}
+      />
     </Card>
   );
 }
@@ -368,6 +384,7 @@ export default function UsersScreen() {
   const api = useApi();
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [togglingSalesRepId, setTogglingSalesRepId] = useState<number | null>(null);
+  const [changingRoleId, setChangingRoleId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
   const { data, loading, refreshing, error, refresh } = useQuery<User[]>(
@@ -375,14 +392,14 @@ export default function UsersScreen() {
     [],
   );
 
-  if (currentUser?.role !== 'ADMIN') {
+  if (!isSuperAdmin(currentUser?.role)) {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Staff accounts' }} />
         <EmptyState
           icon="lock-closed-outline"
-          title="Admins only"
-          subtitle="Only owners can manage staff accounts."
+          title="Super Admins only"
+          subtitle="Only Super Admins can manage staff accounts and roles."
         />
       </Screen>
     );
@@ -428,6 +445,32 @@ export default function UsersScreen() {
     }
   }
 
+  function handleChangeRole(u: User, role: string) {
+    if (role === u.role) return;
+    Alert.alert(
+      `Change ${u.name}'s role?`,
+      `${u.name} will become ${roleLabel(role as Role)}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Change role',
+          onPress: async () => {
+            setChangingRoleId(u.id);
+            try {
+              await api.setUserRole(u.id, role);
+              refresh();
+            } catch (e) {
+              // e.g. 400 "cannot remove your own Super Admin role".
+              Alert.alert('Could not change role', (e as Error).message);
+            } finally {
+              setChangingRoleId(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <>
       <Stack.Screen options={{ title: 'Staff accounts' }} />
@@ -459,6 +502,8 @@ export default function UsersScreen() {
               toggling={togglingId === u.id}
               onToggleSalesRep={handleToggleSalesRep}
               togglingSalesRep={togglingSalesRepId === u.id}
+              onChangeRole={handleChangeRole}
+              changingRole={changingRoleId === u.id}
             />
           ))
         )}

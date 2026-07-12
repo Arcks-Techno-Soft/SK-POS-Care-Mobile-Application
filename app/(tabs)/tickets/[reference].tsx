@@ -29,7 +29,14 @@ import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
-import { prettyEnum, SERVICE_TYPES, SEVERITIES, WARRANTY_STATUSES } from '@/lib/options';
+import {
+  isAdminLevel,
+  isSuperAdmin,
+  prettyEnum,
+  SERVICE_TYPES,
+  SEVERITIES,
+  WARRANTY_STATUSES,
+} from '@/lib/options';
 import {
   colors,
   fontSize,
@@ -45,7 +52,9 @@ export default function TicketDetailScreen() {
   const router = useRouter();
   const api = useApi();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN'; // OWNER is normalized to ADMIN at login
+  // The override controls below (force-close + delete) are reserved Super Admin
+  // powers, so gate them to super-admin only — not plain admins.
+  const isAdmin = isSuperAdmin(user?.role);
 
   const {
     data: ticket,
@@ -57,7 +66,7 @@ export default function TicketDetailScreen() {
     reload,
   } = useQuery<TicketDetail>(() => api.getTicket(reference), [reference]);
 
-  const canEditMeta = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  const canEditMeta = user?.role === 'MANAGER' || isAdminLevel(user?.role);
   // Remote-support tickets skip signatures, PDF, spare parts and shipments.
   const isRemote = ticket?.service_type === 'REMOTE_SUPPORT';
   // Third-party support: engineer-signature-only close, no spares/shipments.
@@ -345,7 +354,7 @@ export default function TicketDetailScreen() {
           <TicketEvents reference={reference} ticket={ticket} reload={reload} />
 
           {isAdmin && (
-            <Section title="Owner / Admin controls">
+            <Section title="Super Admin controls">
               <AdminTicketActions
                 reference={reference}
                 status={ticket.status}

@@ -21,6 +21,7 @@ import { EmptyState, ErrorView, Loading } from '@/components/States';
 import { Badge, Banner, Button, Card, Divider, Field } from '@/components/ui/kit';
 import { useApi, useAuth } from '@/lib/auth';
 import { useQuery } from '@/lib/hooks';
+import { isAdminLevel } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
 import type { RosterContact } from '@/lib/types';
 
@@ -336,7 +337,7 @@ export default function SubEngineersScreen() {
     [],
   );
 
-  if (user?.role !== 'ADMIN') {
+  if (!isAdminLevel(user?.role)) {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Sub-engineer roster' }} />

@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { useQuery } from '@/lib/hooks';
-import { BUSINESS_TYPES, INDIAN_STATES } from '@/lib/options';
+import { BUSINESS_TYPES, INDIAN_STATES, isAdminLevel } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
 import type { PickedDocument, User } from '@/lib/types';
 
@@ -29,7 +29,7 @@ export default function NewInstallationScreen() {
 
   const isEngineer = user?.role === 'ENGINEER';
   // Only Admin/Manager can pre-assign an engineer or credit a sales rep.
-  const canAssign = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const canAssign = isAdminLevel(user?.role) || user?.role === 'MANAGER';
 
   const [businessName, setBusinessName] = useState('');
   const [businessCategory, setBusinessCategory] = useState('');

@@ -22,7 +22,7 @@ import { Screen } from '@/components/Screen';
 import { Avatar, Banner, Button, Divider } from '@/components/ui/kit';
 import { Section } from '@/components/ui/Section';
 import { useAuth } from '@/lib/auth';
-import { roleLabel } from '@/lib/options';
+import { isAdminLevel, isSuperAdmin, roleLabel } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
 import { otaStatusLabel, useOtaUpdates } from '@/lib/updates';
 
@@ -176,15 +176,19 @@ export default function MoreScreen() {
         />
       </Section>
 
-      {/* ---- Workspace (owner-only) ---- */}
-      {user?.role === 'ADMIN' && (
+      {/* ---- Workspace ---- */}
+      {/* The whole section is admin-level (admins keep the sub-engineer roster),
+          but "Staff accounts" (user management) is a reserved Super Admin power. */}
+      {isAdminLevel(user?.role) && (
         <Section title="Workspace" flush>
-          <Row
-            label="Staff accounts"
-            sub="Manage managers and engineers"
-            onPress={() => router.push('/(tabs)/more/users')}
-            right={<Text style={styles.chevron}>›</Text>}
-          />
+          {isSuperAdmin(user?.role) && (
+            <Row
+              label="Staff accounts"
+              sub="Manage users, roles and access"
+              onPress={() => router.push('/(tabs)/more/users')}
+              right={<Text style={styles.chevron}>›</Text>}
+            />
+          )}
           <Row
             label="Sub-engineer roster"
             sub="Manage on-call sub-engineer contacts"

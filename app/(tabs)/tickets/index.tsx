@@ -21,7 +21,7 @@ import { Select, toOptions } from '@/components/ui/Select';
 import { useApi, useAuth } from '@/lib/auth';
 import { useDebounced } from '@/lib/hooks';
 import { timeAgo } from '@/lib/format';
-import { prettyEnum, SEVERITIES, TICKET_STATUSES } from '@/lib/options';
+import { isSuperAdmin, prettyEnum, SEVERITIES, TICKET_STATUSES } from '@/lib/options';
 import { colors, fontSize, severityTone, spacing, statusTone, warrantyTone } from '@/lib/theme';
 import type { TicketListItem } from '@/lib/types';
 
@@ -38,8 +38,9 @@ export default function TicketsListScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isEngineer = user?.role === 'ENGINEER';
-  const isAdmin = user?.role === 'ADMIN'; // OWNER is normalized to ADMIN at login
-  // Quick close/delete (Admin/Owner) — actionRef is the row being acted on.
+  // Quick close (force-close) and quick delete are reserved Super Admin powers.
+  const isAdmin = isSuperAdmin(user?.role);
+  // Quick close/delete (Super Admin) — actionRef is the row being acted on.
   const [actionRef, setActionRef] = useState<string | null>(null);
   const [actionMode, setActionMode] = useState<AdminActionMode>(null);
 

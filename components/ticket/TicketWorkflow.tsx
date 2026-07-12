@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
-import { byEngineerAvailability, engineerLoadLabel } from '@/lib/options';
+import { byEngineerAvailability, engineerLoadLabel, isAdminLevel, isSuperAdmin } from '@/lib/options';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type { ChargesSummary, TicketDetail, User } from '@/lib/types';
@@ -48,7 +48,9 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   // opens so the engineer confirms the exact service charge being billed.
   const [resolveCharges, setResolveCharges] = useState<ChargesSummary | null>(null);
   const [feeDraft, setFeeDraft] = useState('');
-  const isAdmin = user?.role === 'ADMIN';
+  // Setting a service charge below the per-service-type minimum is a reserved
+  // Super Admin power — plain admins are held to the floor like everyone else.
+  const isAdmin = isSuperAdmin(user?.role);
 
   const openResolve = async () => {
     setSummary('');
@@ -65,7 +67,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
     }
   };
 
-  const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+  const isManagerOrAdmin = user?.role === 'MANAGER' || isAdminLevel(user?.role);
   const assignedToMe =
     ticket.assigned_engineer != null && ticket.assigned_engineer.id === user?.id;
   // Warranty must be decided before assigning. Mirrors the backend gate so the
@@ -193,12 +195,12 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
       return;
     }
     // Confirm the service charge. Reject a below-minimum amount instead of
-    // silently accepting it — only an Admin may go below the floor.
+    // silently accepting it — only a Super Admin may go below the floor.
     const min = resolveCharges?.service_fee_min_inr ?? 0;
     const fee = Math.round(Number(feeDraft) || 0);
     if (!isAdmin && min > 0 && fee < min) {
       setResolveError(
-        `Service charge can't be below ₹${min.toLocaleString('en-IN')}. Only an Admin can set lower.`,
+        `Service charge can't be below ₹${min.toLocaleString('en-IN')}. Only a Super Admin can set lower.`,
       );
       return;
     }

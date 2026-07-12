@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { useAuth } from '@/lib/auth';
+import { isAdminLevel } from '@/lib/options';
 import { PendingTicketsProvider, usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize } from '@/lib/theme';
 
@@ -17,7 +18,7 @@ function TabsInner() {
   const { user } = useAuth();
   const { ticketCount, installCount } = usePendingTickets();
   // Analytics is available to Admins and Managers.
-  const canViewAnalytics = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  const canViewAnalytics = isAdminLevel(user?.role) || user?.role === 'MANAGER';
 
   return (
     <Tabs

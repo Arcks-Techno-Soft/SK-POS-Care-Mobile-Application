@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/Select';
 import { Section } from '@/components/ui/Section';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatHours } from '@/lib/format';
+import { isAdminLevel } from '@/lib/options';
 import { useQuery } from '@/lib/hooks';
 import { colors, fontSize, radius, spacing, toneStyles } from '@/lib/theme';
 import type { Analytics, EngineerPerf, IssueBreakdownRow, ProductBreakdownRow } from '@/lib/types';
@@ -128,7 +129,7 @@ export default function AnalyticsScreen() {
     [days],
   );
 
-  if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
+  if (!isAdminLevel(user?.role) && user?.role !== 'MANAGER') {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Analytics' }} />

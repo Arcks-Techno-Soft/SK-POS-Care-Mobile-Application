@@ -21,7 +21,7 @@ import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatINR } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
-import { ticketIsOperable, ticketLockReason } from '@/lib/options';
+import { isAdminLevel, isSuperAdmin, ticketIsOperable, ticketLockReason } from '@/lib/options';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type {
   ChargeLineItem,
@@ -87,7 +87,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
   const bothSigned =
     !!ticket.resolution?.customer_signed_at && !!ticket.resolution?.engineer_signed_at;
   const canCollect =
-    user?.role === 'ADMIN' ||
+    isAdminLevel(user?.role) ||
     user?.role === 'MANAGER' ||
     ticket.assigned_engineer?.id === user?.id;
   // Money breakdown for partial payments (falls back to the charges total when
@@ -283,7 +283,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
         visible={feeOpen}
         current={charges?.service_fee_inr ?? 0}
         min={charges?.service_fee_min_inr ?? 0}
-        canWaiveBelowMin={user?.role === 'ADMIN'}
+        canWaiveBelowMin={isSuperAdmin(user?.role)}
         onClose={() => setFeeOpen(false)}
         onSave={async (fee) => {
           try {
@@ -504,7 +504,7 @@ function ServiceFeeModal({
             hint={
               min > 0
                 ? `Minimum ₹${min.toLocaleString('en-IN')}${
-                    canWaiveBelowMin ? ' · Admin can set lower' : ''
+                    canWaiveBelowMin ? ' · Super Admin can set lower' : ''
                   }`
                 : undefined
             }

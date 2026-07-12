@@ -575,6 +575,15 @@ export class Api {
     });
   }
 
+  /** Super Admin only: change a user's role.
+   *  role ∈ SUPER_ADMIN | ADMIN | MANAGER | ENGINEER | SALES.
+   *  The backend returns 400 if you try to remove your own Super Admin role. */
+  setUserRole(userId: number, role: string): Promise<User> {
+    return this.request('PATCH', `/admin/users/${userId}/role`, {
+      json: { role },
+    });
+  }
+
   /* ---------------- sub-engineer roster ---------------- */
 
   listRoster(district?: string, includeInactive = false): Promise<RosterContact[]> {

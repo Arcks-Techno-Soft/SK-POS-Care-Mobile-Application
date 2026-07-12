@@ -45,6 +45,22 @@ export const SERVICE_TYPES: ServiceType[] = ['SITE_VISIT', 'REMOTE_SUPPORT', 'TH
 
 export const ASSIGNABLE_ROLES: Role[] = ['MANAGER', 'ENGINEER', 'SALES'];
 
+/** Roles a Super Admin may assign when creating a user via the Users screen.
+ *  Superset of ASSIGNABLE_ROLES — adds the admin tiers. Mirrors what the
+ *  backend `POST /admin/users` now accepts (SUPER_ADMIN|ADMIN|MANAGER|ENGINEER|SALES). */
+export const CREATABLE_ROLES: Role[] = ['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'ENGINEER', 'SALES'];
+
+/** True for the top-tier role. The legacy 'OWNER' alias is treated identically. */
+export function isSuperAdmin(role?: Role | string | null): boolean {
+  return role === 'SUPER_ADMIN' || role === 'OWNER';
+}
+
+/** True for any admin-tier user (plain ADMIN or SUPER_ADMIN). Use for general
+ *  admin gates — a Super Admin keeps everything an Admin can do. */
+export function isAdminLevel(role?: Role | string | null): boolean {
+  return role === 'ADMIN' || isSuperAdmin(role);
+}
+
 export const BUSINESS_TYPES = [
   'Restaurant',
   'Hotel',
@@ -172,6 +188,8 @@ export function byEngineerAvailability(targetArea?: string | null) {
 /** Human-readable label for a role. MANAGER is shown as "Admin" (matches web). */
 export function roleLabel(role: Role): string {
   switch (role) {
+    case 'SUPER_ADMIN':
+      return 'Super Admin';
     case 'ADMIN':
       return 'Admin';
     case 'MANAGER':

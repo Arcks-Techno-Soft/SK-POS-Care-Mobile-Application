@@ -121,11 +121,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const applySession = useCallback((session: storage.StoredSession) => {
-    // Legacy: the backend still sends role "OWNER" for un-migrated admins;
-    // treat it as ADMIN everywhere in the app.
+    // The legacy top-tier role "OWNER" is a deprecated alias of SUPER_ADMIN;
+    // fold both to SUPER_ADMIN so owner/super-admin users are never treated as
+    // a plain ADMIN (which lacks the reserved super-admin powers).
+    const r = session.user.role as string;
     const u =
-      (session.user.role as string) === 'OWNER'
-        ? { ...session.user, role: 'ADMIN' as typeof session.user.role }
+      r === 'OWNER' || r === 'SUPER_ADMIN'
+        ? { ...session.user, role: 'SUPER_ADMIN' as typeof session.user.role }
         : session.user;
     tokenRef.current = session.token;
     setUser(u);
@@ -218,8 +220,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const cached = await storage.getSession();
       if (cached) {
-        const role =
-          (cached.user.role as string) === 'OWNER' ? 'ADMIN' : cached.user.role;
+        const cachedRole = cached.user.role as string;
+        const role: Role =
+          cachedRole === 'OWNER' || cachedRole === 'SUPER_ADMIN'
+            ? 'SUPER_ADMIN'
+            : cached.user.role;
         setLockedAccount({ name: cached.user.name, role });
       } else {
         setLockedAccount({ name: creds.username, role: null });
