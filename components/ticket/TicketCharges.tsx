@@ -66,6 +66,10 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
 
   const charges = chargesQuery.data;
   const operable = ticketIsOperable(ticket.status);
+  // A Super Admin may correct the invoice (service fee + spares) at ANY status,
+  // including after the ticket is CLOSED — a post-close billing correction the
+  // backend now allows. Everyone else is held to the normal operable window.
+  const canEditCharges = operable || isSuperAdmin(user?.role);
   // Remote-support tickets carry no spare parts — show only the service fee.
   const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
   const isThirdParty = ticket.service_type === 'THIRD_PARTY_SUPPORT';
@@ -126,7 +130,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
                 <Text style={styles.lineTotal}>
                   {formatINR(charges.service_fee_inr)}
                 </Text>
-                {operable && (
+                {canEditCharges && (
                   <Pressable
                     onPress={() => setFeeOpen(true)}
                     hitSlop={8}
@@ -150,7 +154,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
                     {i > 0 && <Divider style={{ marginVertical: spacing.sm }} />}
                     <ChargeRow
                       item={item}
-                      editable={operable}
+                      editable={canEditCharges}
                       onEdit={() => setEditLine(item)}
                       onRemove={() =>
                         Alert.alert(
@@ -214,7 +218,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
 
             {!noSpares && (
             <View style={{ marginTop: spacing.md }}>
-              {operable ? (
+              {canEditCharges ? (
                 <Button
                   title="Add spare"
                   icon="add"
