@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
   RefreshControl,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -16,6 +17,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { AttemptsSection } from '@/components/AttemptsSection';
+import InstallationSubEngineers from '@/components/installation/InstallationSubEngineers';
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { SignaturePad } from '@/components/SignaturePad';
 import { ErrorView, Loading } from '@/components/States';
@@ -36,7 +38,7 @@ import {
   prettyEnum,
   roleLabel,
 } from '@/lib/options';
-import { colors, fontSize, spacing, statusTone } from '@/lib/theme';
+import { colors, fontSize, radius, spacing, statusTone } from '@/lib/theme';
 import type {
   InstallationDetail,
   InstallationEvent,
@@ -201,7 +203,13 @@ export default function InstallationDetailScreen() {
             }}
           />
 
-          {/* 5. Sign-off (COMPLETED or CLOSED) */}
+          {/* 5. Field sub-engineers (off-field contractors on this job) */}
+          <InstallationSubEngineers
+            reference={reference}
+            installation={installation}
+          />
+
+          {/* 6. Sign-off (COMPLETED or CLOSED) */}
           {(installation.status === 'COMPLETED' || installation.status === 'CLOSED') && (
             <SignoffSection
               installation={installation}
@@ -211,7 +219,7 @@ export default function InstallationDetailScreen() {
             />
           )}
 
-          {/* 6. Activity */}
+          {/* 7. Activity */}
           <ActivitySection reference={reference} api={api} />
         </KeyboardAwareScrollView>
       ) : null}
@@ -912,8 +920,43 @@ function SignoffSection({
   const [pdfLoading, setPdfLoading] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
+  const [fieldLink, setFieldLink] = useState<string | null>(null);
+  const [generatingLink, setGeneratingLink] = useState(false);
+
   const resolution = installation.resolution;
   const serverPhotoCaptured = !!resolution?.customer_photo_captured_at;
+  // Once the off-field link exists, on-site signing pauses — the sub-engineer
+  // captures both signatures through the link instead.
+  const fieldMode = !!resolution?.field_sign_link_generated_at;
+  const hasSubEngineer = (installation.sub_engineers?.length ?? 0) > 0;
+
+  const generateFieldLink = async () => {
+    setBanner(null);
+    setGeneratingLink(true);
+    try {
+      const res = await api.installationFieldSignLink(installation.reference);
+      setFieldLink(res.url);
+      onReload();
+    } catch (e) {
+      setBanner(
+        e instanceof ApiError ? e.message : 'Could not generate the signing link.',
+      );
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const shareFieldLink = async () => {
+    if (!fieldLink) return;
+    try {
+      await Share.share({
+        message: `Installation sign-off link for ${installation.reference}: ${fieldLink}`,
+        url: fieldLink,
+      });
+    } catch {
+      // User dismissed the share sheet — nothing to do.
+    }
+  };
 
   // The photo just picked on this device, shown as a preview immediately and
   // kept around (even if the upload fails) so the engineer always sees it.
@@ -1020,13 +1063,60 @@ function SignoffSection({
     <Section title="Sign-off">
       {banner && <Banner message={banner} tone="danger" />}
 
+      {/* Off-field signing — send the link to a sub-engineer who captures both
+          signatures and installation photos on site. */}
+      {installation.status === 'COMPLETED' && !resolution?.engineer_signed_at && (
+        <View style={{ marginBottom: spacing.md }}>
+          <Text style={styles.signoffLabel}>Off-field signing</Text>
+          {fieldMode ? (
+            <>
+              <Text
+                style={[styles.signedInfo, { color: colors.inkSubtle, fontWeight: '400' }]}
+              >
+                Link sent to a sub-engineer — on-site signing is paused until
+                they submit.
+              </Text>
+              {!!fieldLink && (
+                <>
+                  <Text selectable style={styles.linkBox}>
+                    {fieldLink}
+                  </Text>
+                  <Button
+                    title="Share link"
+                    variant="secondary"
+                    icon="share-outline"
+                    onPress={shareFieldLink}
+                  />
+                </>
+              )}
+            </>
+          ) : canAct && hasSubEngineer ? (
+            <Button
+              title="Generate sub-engineer signing link"
+              variant="secondary"
+              icon="link-outline"
+              loading={generatingLink}
+              onPress={generateFieldLink}
+              style={{ marginBottom: spacing.sm }}
+            />
+          ) : canAct ? (
+            <Text
+              style={[styles.signedInfo, { color: colors.inkSubtle, fontWeight: '400' }]}
+            >
+              Add a field sub-engineer above to enable off-field signing.
+            </Text>
+          ) : null}
+          <Divider style={{ marginVertical: spacing.md }} />
+        </View>
+      )}
+
       {/* Customer signature */}
       <Text style={styles.signoffLabel}>Customer Signature</Text>
       {resolution?.customer_signed_at ? (
         <Text style={styles.signedInfo}>
           Signed by {resolution.customer_signer_name} · {formatDateTime(resolution.customer_signed_at)}
         </Text>
-      ) : canAct ? (
+      ) : canAct && !fieldMode ? (
         <Button
           title="Collect Customer Signature"
           variant="secondary"
@@ -1049,7 +1139,7 @@ function SignoffSection({
         <Text style={styles.signedInfo}>
           Signed · {formatDateTime(resolution.engineer_signed_at)}
         </Text>
-      ) : canAct ? (
+      ) : canAct && !fieldMode ? (
         <Button
           title="Add Engineer Signature"
           variant="secondary"
@@ -1305,6 +1395,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.success,
     fontWeight: '500',
+    marginBottom: spacing.sm,
+  },
+  linkBox: {
+    fontSize: fontSize.xs,
+    color: colors.inkSoft,
+    backgroundColor: colors.surfaceSunken,
+    borderRadius: radius.md,
+    padding: spacing.md,
     marginBottom: spacing.sm,
   },
 

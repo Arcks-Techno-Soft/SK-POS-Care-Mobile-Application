@@ -709,6 +709,52 @@ export class Api {
     return this.request('POST', `/admin/installations/${reference}/self-assign`);
   }
 
+  /* -------- installation sub-engineers (shared district roster) -------- */
+
+  listInstallationSubEngineers(reference: string): Promise<SubEngineer[]> {
+    return this.request('GET', `/admin/installations/${reference}/sub-engineers`);
+  }
+
+  installationSubEngineerSuggestions(reference: string): Promise<RosterContact[]> {
+    return this.request(
+      'GET',
+      `/admin/installations/${reference}/sub-engineer-suggestions`,
+    );
+  }
+
+  addInstallationSubEngineer(
+    reference: string,
+    body: { roster_id?: number; name?: string; phone?: string; location?: string },
+  ): Promise<SubEngineer> {
+    return this.request('POST', `/admin/installations/${reference}/sub-engineers`, {
+      json: body,
+    });
+  }
+
+  updateInstallationSubEngineerFee(
+    reference: string,
+    subId: number,
+    feeInr: number,
+  ): Promise<SubEngineer> {
+    return this.request(
+      'PATCH',
+      `/admin/installations/${reference}/sub-engineers/${subId}`,
+      { json: { fee_inr: feeInr } },
+    );
+  }
+
+  removeInstallationSubEngineer(reference: string, subId: number): Promise<void> {
+    return this.request(
+      'DELETE',
+      `/admin/installations/${reference}/sub-engineers/${subId}`,
+    );
+  }
+
+  /** Generate the off-field signing link to send a sub-engineer manually. */
+  installationFieldSignLink(reference: string): Promise<FieldSignLink> {
+    return this.request('POST', `/admin/installations/${reference}/field-sign-link`);
+  }
+
   /** Begin a new on-site work attempt. */
   startInstallationAttempt(reference: string): Promise<InstallationDetail> {
     return this.request('POST', `/admin/installations/${reference}/attempts`);

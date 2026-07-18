@@ -309,6 +309,9 @@ export interface InstallationResolutionDoc {
   customer_photo_url: string | null;
   engineer_signed_at: string | null;
   pdf_generated_at: string | null;
+  /** Set once the off-field signing link is generated — on-site signing then
+   *  pauses and the sub-engineer captures both signatures via the link. */
+  field_sign_link_generated_at?: string | null;
 }
 
 export interface InstallationDetail {
@@ -341,6 +344,8 @@ export interface InstallationDetail {
   created_at: string;
   resolution: InstallationResolutionDoc | null;
   attempts: InstallationAttempt[];
+  /** Off-field contractors attending this installation. */
+  sub_engineers?: SubEngineer[];
 }
 
 /** One installation work attempt (visit) with its notes + photos. */
