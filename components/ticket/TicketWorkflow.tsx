@@ -40,6 +40,13 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const [pickedEngineer, setPickedEngineer] = useState<string | null>(null);
   const [pickedCoEngineer, setPickedCoEngineer] = useState<string | null>(null);
 
+  // Sales rep credited with this service call (optional, view-only for the rep).
+  const [salesReps, setSalesReps] = useState<User[] | null>(null);
+  const [salesRepId, setSalesRepId] = useState<string | null>(
+    ticket.sales_rep ? String(ticket.sales_rep.id) : null,
+  );
+  const [savingSalesRep, setSavingSalesRep] = useState(false);
+
   const [resolveOpen, setResolveOpen] = useState(false);
   const [summary, setSummary] = useState('');
   const [resolveError, setResolveError] = useState<string | null>(null);
@@ -118,6 +125,35 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.status]);
+
+  // Sales rep credit — Admin/Manager only, editable until the ticket is CLOSED.
+  const canManageSalesRep = isManagerOrAdmin && ticket.status !== 'CLOSED';
+
+  useEffect(() => {
+    if (!canManageSalesRep || salesReps) return;
+    api
+      .listSalesReps()
+      .then(setSalesReps)
+      .catch(() => setSalesReps([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageSalesRep]);
+
+  const salesRepOptions = [
+    { label: 'None', value: '' },
+    ...(salesReps ?? []).map((r) => ({ label: r.name, value: String(r.id) })),
+  ];
+
+  const handleSetSalesRep = async () => {
+    setSavingSalesRep(true);
+    try {
+      await api.setTicketSalesRep(reference, salesRepId ? Number(salesRepId) : null);
+      reload();
+    } catch (e) {
+      Alert.alert('Sales rep', errMsg(e));
+    } finally {
+      setSavingSalesRep(false);
+    }
+  };
 
   // Co-assigned engineers: extra app users attending the same visit. View +
   // notified only — only the primary assignee drives the workflow.
@@ -523,6 +559,32 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
             </View>
           )}
 
+        {/* Sales representative — Admin/Manager credit who sourced the deal.
+            Optional (a 'None' option); editable until the ticket is CLOSED. */}
+        {canManageSalesRep && (
+          <View style={styles.coEng}>
+            <Text style={styles.coEngTitle}>Sales representative</Text>
+            <Select
+              label="Sales representative"
+              value={salesRepId}
+              onChange={(v) => setSalesRepId(v || null)}
+              options={salesRepOptions}
+              placeholder="None"
+              sheetTitle="Sales Representative"
+            />
+            <Button
+              title={ticket.sales_rep ? 'Update sales rep' : 'Set sales rep'}
+              icon="briefcase-outline"
+              variant="secondary"
+              loading={savingSalesRep}
+              disabled={
+                salesRepId === (ticket.sales_rep ? String(ticket.sales_rep.id) : null)
+              }
+              onPress={handleSetSalesRep}
+            />
+          </View>
+        )}
+
         {/* Actor / timestamp trail */}
         <View style={styles.trail}>
           {ticket.acknowledged_at && (
@@ -536,6 +598,11 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               Assigned to {ticket.assigned_engineer?.name ?? 'an engineer'}
               {ticket.assigned_by ? ` by ${ticket.assigned_by.name}` : ''} ·{' '}
               {formatDateTime(ticket.assigned_at)}
+            </Text>
+          )}
+          {ticket.sales_rep && (
+            <Text style={styles.trailLine}>
+              Sales rep: {ticket.sales_rep.name}
             </Text>
           )}
           {ticket.accepted_at && (
