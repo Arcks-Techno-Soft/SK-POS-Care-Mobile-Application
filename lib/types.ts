@@ -160,6 +160,8 @@ export interface TicketDetail {
   assigned_by: User | null;
   assigned_engineer: User | null;
   assigned_at: string | null;
+  // Sales rep credited with this service call (view-only for the rep). Optional.
+  sales_rep: User | null;
   accepted_at: string | null;
   resolving_started_at: string | null;
   resolved_at: string | null;

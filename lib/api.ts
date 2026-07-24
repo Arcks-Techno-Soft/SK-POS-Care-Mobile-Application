@@ -299,6 +299,13 @@ export class Api {
     return this.request('POST', `/admin/tickets/${reference}/self-assign`);
   }
 
+  /** Credit (or clear, with null) the sales rep for this service call. */
+  setTicketSalesRep(reference: string, salesRepId: number | null): Promise<TicketDetail> {
+    return this.request('PATCH', `/admin/tickets/${reference}/sales-rep`, {
+      json: { sales_rep_id: salesRepId },
+    });
+  }
+
   /** Add a co-assigned engineer (extra app user) to the same visit. */
   addEngineer(reference: string, engineerId: number): Promise<TicketDetail> {
     return this.request('POST', `/admin/tickets/${reference}/engineers`, {
