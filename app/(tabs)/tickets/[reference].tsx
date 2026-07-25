@@ -1,5 +1,6 @@
 /** Ticket detail screen — header, workflow, and all sub-resource sections. */
 
+import { useState } from 'react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
@@ -22,7 +23,7 @@ import TicketSubEngineers from '@/components/ticket/TicketSubEngineers';
 import TicketThirdParty from '@/components/ticket/TicketThirdParty';
 import TicketWorkflow from '@/components/ticket/TicketWorkflow';
 import AdminTicketActions from '@/components/ticket/AdminTicketActions';
-import { Badge, Button, Card, KeyValue } from '@/components/ui/kit';
+import { Badge, Button, Card, Field, KeyValue } from '@/components/ui/kit';
 import { Section } from '@/components/ui/Section';
 import { Select, toOptions } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
@@ -30,6 +31,7 @@ import { useApi, useAuth } from '@/lib/auth';
 import { timeAgo } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
 import {
+  INDIAN_STATES,
   isAdminLevel,
   isSuperAdmin,
   prettyEnum,
@@ -76,6 +78,11 @@ export default function TicketDetailScreen() {
   const canEditServiceType =
     (canEditMeta || (!!ticket && ticket.assigned_engineer?.id === user?.id)) &&
     ticket?.status !== 'RESOLVED' &&
+    ticket?.status !== 'CLOSED';
+  // Customer + address stay correctable by Admin/Manager or the assigned
+  // engineer until the ticket is CLOSED.
+  const canEditDetails =
+    (canEditMeta || (!!ticket && ticket.assigned_engineer?.id === user?.id)) &&
     ticket?.status !== 'CLOSED';
 
   return (
@@ -138,13 +145,11 @@ export default function TicketDetailScreen() {
 
           {/* Customer & site */}
           <Section title="Customer & site">
-            <KeyValue
-              label="Contact"
-              value={
-                ticket.contact_person_profile
-                  ? `${ticket.contact_name} · ${ticket.contact_person_profile}`
-                  : ticket.contact_name
-              }
+            <TicketCustomerRow
+              ticket={ticket}
+              canEdit={canEditDetails}
+              api={api}
+              onReload={reload}
             />
             {ticket.raised_by ? (
               <KeyValue
@@ -161,26 +166,12 @@ export default function TicketDetailScreen() {
                 }`}
               />
             )}
-            <KeyValue
-              label="Phone"
-              value={
-                ticket.phone ? (
-                  <Text
-                    style={styles.link}
-                    onPress={() => Linking.openURL(`tel:${ticket.phone}`)}
-                  >
-                    {ticket.phone}
-                  </Text>
-                ) : (
-                  '—'
-                )
-              }
+            <TicketAddressRow
+              ticket={ticket}
+              canEdit={canEditDetails}
+              api={api}
+              onReload={reload}
             />
-            {!!ticket.email && <KeyValue label="Email" value={ticket.email} />}
-            {!!ticket.business_type && (
-              <KeyValue label="Business type" value={ticket.business_type} />
-            )}
-            <KeyValue label="Address" value={formatAddress(ticket)} />
             {!!ticket.preferred_contact_time && (
               <KeyValue
                 label="Preferred time"
@@ -374,6 +365,216 @@ function showError(e: unknown) {
   Alert.alert('Error', msg);
 }
 
+/* Customer / contact details — read-only with an inline edit form. Editable by
+   Admin/Manager or the assigned engineer until the ticket is CLOSED. */
+function TicketCustomerRow({
+  ticket,
+  canEdit,
+  api,
+  onReload,
+}: {
+  ticket: TicketDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [businessName, setBusinessName] = useState('');
+  const [businessType, setBusinessType] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [profile, setProfile] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setBusinessName(ticket.business_name ?? '');
+    setBusinessType(ticket.business_type ?? '');
+    setContactName(ticket.contact_name ?? '');
+    setProfile(ticket.contact_person_profile ?? '');
+    setPhone(ticket.phone ?? '');
+    setEmail(ticket.email ?? '');
+    setEditing(true);
+  };
+
+  const save = async () => {
+    if (businessName.trim().length < 2) return Alert.alert('Customer', 'Business name is required.');
+    if (businessType.trim().length < 2) return Alert.alert('Customer', 'Business type is required.');
+    if (contactName.trim().length < 2) return Alert.alert('Customer', 'Contact name is required.');
+    if (phone.replace(/\D/g, '').replace(/^91/, '').length !== 10)
+      return Alert.alert('Customer', 'Enter a valid 10-digit mobile number.');
+    setSaving(true);
+    try {
+      await api.updateTicketCustomer(ticket.reference, {
+        business_name: businessName.trim(),
+        business_type: businessType.trim(),
+        contact_name: contactName.trim(),
+        contact_person_profile: profile.trim() || null,
+        phone: phone.trim(),
+        email: email.trim() || null,
+      });
+      setEditing(false);
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Customer',
+        e instanceof ApiError ? e.message : 'Could not update the customer details.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <View style={styles.editBox}>
+        <Text style={styles.editLabel}>Customer Details</Text>
+        <Field value={businessName} onChangeText={setBusinessName} placeholder="Business name" autoCapitalize="words" />
+        <Field value={businessType} onChangeText={setBusinessType} placeholder="Business type" autoCapitalize="words" />
+        <Field value={contactName} onChangeText={setContactName} placeholder="Contact name" autoCapitalize="words" />
+        <Field value={profile} onChangeText={setProfile} placeholder="Contact role (optional)" autoCapitalize="words" />
+        <Field value={phone} onChangeText={setPhone} placeholder="10-digit mobile" keyboardType="phone-pad" />
+        <Field value={email} onChangeText={setEmail} placeholder="Email (optional)" keyboardType="email-address" autoCapitalize="none" />
+        <View style={styles.editBtnRow}>
+          <Button title="Cancel" variant="secondary" size="sm" fullWidth={false} onPress={() => setEditing(false)} />
+          <Button title="Save" size="sm" fullWidth={false} loading={saving} onPress={save} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <KeyValue
+        label="Contact"
+        value={
+          ticket.contact_person_profile
+            ? `${ticket.contact_name} · ${ticket.contact_person_profile}`
+            : ticket.contact_name
+        }
+      />
+      <KeyValue
+        label="Phone"
+        value={
+          ticket.phone ? (
+            <Text style={styles.link} onPress={() => Linking.openURL(`tel:${ticket.phone}`)}>
+              {ticket.phone}
+            </Text>
+          ) : (
+            '—'
+          )
+        }
+      />
+      {!!ticket.email && <KeyValue label="Email" value={ticket.email} />}
+      {!!ticket.business_type && <KeyValue label="Business type" value={ticket.business_type} />}
+      {canEdit && (
+        <Text style={styles.editLink} onPress={start}>
+          Edit customer details
+        </Text>
+      )}
+    </>
+  );
+}
+
+/* Site address — read-only with an inline edit form. Same gate. Preserves any
+   map pin previously dropped on the web. */
+function TicketAddressRow({
+  ticket,
+  canEdit,
+  api,
+  onReload,
+}: {
+  ticket: TicketDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [line1, setLine1] = useState('');
+  const [line2, setLine2] = useState('');
+  const [line3, setLine3] = useState('');
+  const [city, setCity] = useState('');
+  const [stateName, setStateName] = useState<string | null>(null);
+  const [pincode, setPincode] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setLine1(ticket.address_line1 ?? '');
+    setLine2(ticket.address_line2 ?? '');
+    setLine3(ticket.address_line3 ?? '');
+    setCity(ticket.city ?? '');
+    setStateName(ticket.state ?? null);
+    setPincode(ticket.pincode ?? '');
+    setEditing(true);
+  };
+
+  const save = async () => {
+    if (line1.trim().length < 3) return Alert.alert('Address', 'Address line 1 is required.');
+    if (city.trim().length < 2) return Alert.alert('Address', 'City is required.');
+    if (!stateName) return Alert.alert('Address', 'Select a state.');
+    if (!/^\d{4,10}$/.test(pincode.trim()))
+      return Alert.alert('Address', 'Enter a valid pincode (digits only).');
+    setSaving(true);
+    try {
+      await api.updateTicketAddress(ticket.reference, {
+        address_line1: line1.trim(),
+        address_line2: line2.trim() || null,
+        address_line3: line3.trim() || null,
+        city: city.trim(),
+        state: stateName,
+        pincode: pincode.trim(),
+        // Preserve any pin previously dropped on the web.
+        latitude: ticket.latitude,
+        longitude: ticket.longitude,
+      });
+      setEditing(false);
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Address',
+        e instanceof ApiError ? e.message : 'Could not update the address.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <View style={styles.editBox}>
+        <Text style={styles.editLabel}>Site Address</Text>
+        <Field value={line1} onChangeText={setLine1} placeholder="Address line 1" />
+        <Field value={line2} onChangeText={setLine2} placeholder="Address line 2 (optional)" />
+        <Field value={line3} onChangeText={setLine3} placeholder="Address line 3 (optional)" />
+        <Field value={city} onChangeText={setCity} placeholder="City" autoCapitalize="words" />
+        <Select
+          value={stateName}
+          onChange={setStateName}
+          placeholder="Select state"
+          sheetTitle="State"
+          options={INDIAN_STATES.map((s) => ({ label: s, value: s }))}
+        />
+        <Field value={pincode} onChangeText={setPincode} placeholder="Pincode" keyboardType="number-pad" />
+        <View style={styles.editBtnRow}>
+          <Button title="Cancel" variant="secondary" size="sm" fullWidth={false} onPress={() => setEditing(false)} />
+          <Button title="Save" size="sm" fullWidth={false} loading={saving} onPress={save} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <KeyValue label="Address" value={formatAddress(ticket) || '—'} />
+      {canEdit && (
+        <Text style={styles.editLink} onPress={start}>
+          Edit address
+        </Text>
+      )}
+    </>
+  );
+}
+
 function formatAddress(t: TicketDetail): string {
   const lines = [
     t.address_line1,
@@ -428,5 +629,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.inkSubtle,
     width: 72,
+  },
+
+  editBox: { gap: spacing.sm, marginTop: spacing.sm },
+  editLabel: { fontSize: fontSize.sm, color: colors.inkSubtle, fontWeight: '600' },
+  editBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  editLink: {
+    fontSize: fontSize.sm,
+    color: colors.info,
+    fontWeight: '600',
+    marginTop: spacing.sm,
   },
 });

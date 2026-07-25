@@ -128,24 +128,12 @@ export default function InstallationDetailScreen() {
 
           {/* 3. Details */}
           <Section title="Details">
-            <KeyValue label="Business Category" value={installation.business_category} />
-            <Divider />
-            <KeyValue label="Contact Name" value={installation.contact_name} />
-            <Divider />
-            <KeyValue
-              label="Phone"
-              value={
-                <Pressable onPress={() => Linking.openURL(`tel:${installation.phone}`)}>
-                  <Text style={styles.phoneLink}>{installation.phone}</Text>
-                </Pressable>
-              }
+            <CustomerRow
+              installation={installation}
+              canEdit={canEditInvoice}
+              api={api}
+              onReload={reloadAndBadge}
             />
-            {installation.email ? (
-              <>
-                <Divider />
-                <KeyValue label="Email" value={installation.email} />
-              </>
-            ) : null}
             {installation.products_for_installation ? (
               <>
                 <Divider />
@@ -423,6 +411,112 @@ function InvoiceDocumentRow({
         </View>
       }
     />
+  );
+}
+
+/* ─── Customer / contact details (editable) ─── */
+
+function CustomerRow({
+  installation,
+  canEdit,
+  api,
+  onReload,
+}: {
+  installation: InstallationDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [businessName, setBusinessName] = useState('');
+  const [category, setCategory] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setBusinessName(installation.business_name ?? '');
+    setCategory(installation.business_category ?? '');
+    setContactName(installation.contact_name ?? '');
+    setPhone(installation.phone ?? '');
+    setEmail(installation.email ?? '');
+    setEditing(true);
+  };
+
+  const save = async () => {
+    if (businessName.trim().length < 2) return Alert.alert('Customer', 'Business name is required.');
+    if (category.trim().length < 2) return Alert.alert('Customer', 'Business category is required.');
+    if (contactName.trim().length < 2) return Alert.alert('Customer', 'Contact name is required.');
+    if (phone.replace(/[^\d+]/g, '').replace(/^\+/, '').length < 7)
+      return Alert.alert('Customer', 'Enter a valid phone number.');
+    setSaving(true);
+    try {
+      await api.updateInstallationCustomer(installation.reference, {
+        business_name: businessName.trim(),
+        business_category: category.trim(),
+        contact_name: contactName.trim(),
+        phone: phone.trim(),
+        email: email.trim() || null,
+      });
+      setEditing(false);
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Customer',
+        e instanceof ApiError ? e.message : 'Could not update the customer details.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <View style={styles.invoiceEditBox}>
+        <Text style={styles.invoiceEditLabel}>Customer Details</Text>
+        <Field value={businessName} onChangeText={setBusinessName} placeholder="Business name" autoCapitalize="words" />
+        <Field value={category} onChangeText={setCategory} placeholder="Business category" autoCapitalize="words" />
+        <Field value={contactName} onChangeText={setContactName} placeholder="Contact name" autoCapitalize="words" />
+        <Field value={phone} onChangeText={setPhone} placeholder="Phone" keyboardType="phone-pad" />
+        <Field value={email} onChangeText={setEmail} placeholder="Email (optional)" keyboardType="email-address" autoCapitalize="none" />
+        <View style={styles.invoiceBtnRow}>
+          <Button title="Cancel" variant="secondary" size="sm" fullWidth={false} onPress={() => setEditing(false)} />
+          <Button title="Save" size="sm" fullWidth={false} loading={saving} onPress={save} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <KeyValue label="Business Category" value={installation.business_category} />
+      <Divider />
+      <KeyValue label="Contact Name" value={installation.contact_name} />
+      <Divider />
+      <KeyValue
+        label="Phone"
+        value={
+          <Pressable onPress={() => Linking.openURL(`tel:${installation.phone}`)}>
+            <Text style={styles.phoneLink}>{installation.phone}</Text>
+          </Pressable>
+        }
+      />
+      {installation.email ? (
+        <>
+          <Divider />
+          <KeyValue label="Email" value={installation.email} />
+        </>
+      ) : null}
+      {canEdit ? (
+        <>
+          <Divider />
+          <Pressable onPress={start} hitSlop={8}>
+            <Text style={styles.invoiceEdit}>Edit customer details</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </>
   );
 }
 
