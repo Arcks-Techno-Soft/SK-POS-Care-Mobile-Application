@@ -399,6 +399,38 @@ export class Api {
     });
   }
 
+  /** Correct the customer / contact details. Editable until the ticket closes. */
+  updateTicketCustomer(
+    reference: string,
+    body: {
+      business_name: string;
+      contact_name: string;
+      phone: string;
+      email?: string | null;
+      business_type: string;
+      contact_person_profile?: string | null;
+    },
+  ): Promise<TicketDetail> {
+    return this.request('PATCH', `/admin/tickets/${reference}/customer`, { json: body });
+  }
+
+  /** Correct the site address / location. Editable until the ticket closes. */
+  updateTicketAddress(
+    reference: string,
+    body: {
+      address_line1: string;
+      address_line2?: string | null;
+      address_line3?: string | null;
+      city: string;
+      state: string;
+      pincode: string;
+      latitude?: number | null;
+      longitude?: number | null;
+    },
+  ): Promise<TicketDetail> {
+    return this.request('PATCH', `/admin/tickets/${reference}/address`, { json: body });
+  }
+
   signTicketCustomer(
     reference: string,
     signerName: string,
@@ -676,6 +708,20 @@ export class Api {
     return this.request('PATCH', `/admin/installations/${reference}/address`, {
       json: body,
     });
+  }
+
+  /** Correct the customer / contact details. Editable until the installation closes. */
+  updateInstallationCustomer(
+    reference: string,
+    body: {
+      business_name: string;
+      business_category: string;
+      contact_name: string;
+      phone: string;
+      email?: string | null;
+    },
+  ): Promise<InstallationDetail> {
+    return this.request('PATCH', `/admin/installations/${reference}/customer`, { json: body });
   }
 
   setInstallationSalesRep(
