@@ -678,6 +678,9 @@ export class Api {
     phone: string;
     email?: string;
     invoice_number: string;
+    products_for_installation: string;
+    /** Planned on-site date, "yyyy-mm-dd". Omit or send null for none. */
+    expected_installation_date?: string | null;
     address_line1: string;
     address_line2?: string;
     address_line3?: string;
@@ -722,6 +725,18 @@ export class Api {
     },
   ): Promise<InstallationDetail> {
     return this.request('PATCH', `/admin/installations/${reference}/customer`, { json: body });
+  }
+
+  /** Set, change, or clear the planned on-site date. Admin / Manager only.
+   *  Pass null to clear it. Changing it re-arms the WhatsApp heads-up that
+   *  goes to Super Admin / Admin / Managers ahead of the visit. */
+  setInstallationExpectedDate(
+    reference: string,
+    date: string | null,
+  ): Promise<InstallationDetail> {
+    return this.request('PATCH', `/admin/installations/${reference}/expected-date`, {
+      json: { expected_installation_date: date },
+    });
   }
 
   setInstallationSalesRep(

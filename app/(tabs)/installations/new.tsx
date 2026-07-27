@@ -5,10 +5,12 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BusinessNameField } from '@/components/BusinessNameField';
 import { Screen } from '@/components/Screen';
+import { DateField } from '@/components/ui/DateField';
 import { Banner, Button, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
+import { todayISO } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
 import { BUSINESS_TYPES, INDIAN_STATES, isAdminLevel } from '@/lib/options';
 import { colors, fontSize, spacing } from '@/lib/theme';
@@ -39,6 +41,9 @@ export default function NewInstallationScreen() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [products, setProducts] = useState('');
+  // Optional planned on-site date, "yyyy-mm-dd". Leadership gets a WhatsApp
+  // heads-up a couple of days before it.
+  const [expectedDate, setExpectedDate] = useState<string | null>(null);
   const [invoiceMode, setInvoiceMode] = useState<InvoiceMode>('later');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDoc, setInvoiceDoc] = useState<PickedDocument | null>(null);
@@ -97,6 +102,9 @@ export default function NewInstallationScreen() {
     if (invoiceMode === 'enter' && !invoiceNumber.trim())
       errs.invoiceNumber = 'Enter the invoice number, or choose “To be added later”.';
     if (products.trim().length < 2) errs.products = 'List the products to be installed.';
+    // A reminder for a date that has already passed would never fire.
+    if (expectedDate && expectedDate < todayISO())
+      errs.expectedDate = 'The expected installation date cannot be in the past.';
     if (addressLine1.trim().length < 3) errs.addressLine1 = 'Address line 1 is required.';
     if (city.trim().length < 2) errs.city = 'City is required.';
     if (!stateName) errs.state = 'Select a state.';
@@ -137,6 +145,7 @@ export default function NewInstallationScreen() {
         email?: string;
         invoice_number: string;
         products_for_installation: string;
+        expected_installation_date?: string | null;
         address_line1: string;
         address_line2?: string;
         address_line3?: string;
@@ -162,6 +171,7 @@ export default function NewInstallationScreen() {
         pincode: pincode.trim(),
       };
       if (email.trim()) body.email = email.trim();
+      if (expectedDate) body.expected_installation_date = expectedDate;
       if (addressLine2.trim()) body.address_line2 = addressLine2.trim();
       if (addressLine3.trim()) body.address_line3 = addressLine3.trim();
       if (assignedEngineerId) body.assigned_engineer_id = Number(assignedEngineerId);
@@ -288,6 +298,17 @@ export default function NewInstallationScreen() {
         multiline
         numberOfLines={4}
         autoCapitalize="words"
+      />
+
+      <DateField
+        label="Expected Installation Date"
+        value={expectedDate}
+        onChange={setExpectedDate}
+        placeholder="Not scheduled yet"
+        sheetTitle="Expected Installation Date"
+        helper="Optional. Admin and managers get a WhatsApp reminder ahead of this date."
+        error={errors.expectedDate}
+        minDate={todayISO()}
       />
 
       <Text style={styles.sectionLabel}>Invoice</Text>

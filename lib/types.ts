@@ -326,6 +326,9 @@ export interface InstallationDetail {
   email: string | null;
   invoice_number: string;
   products_for_installation: string | null;
+  /** Planned on-site date, "yyyy-mm-dd". Drives the upcoming-installation
+   *  WhatsApp reminder to Super Admin / Admin / Managers. Null until set. */
+  expected_installation_date?: string | null;
   invoice_document: InvoiceDocument | null;
   status: InstallationStatus;
   address_line1: string | null;
@@ -377,6 +380,8 @@ export interface InstallationListItem {
   contact_name: string;
   phone: string;
   invoice_number: string;
+  /** Planned on-site date, "yyyy-mm-dd", or null if none is set yet. */
+  expected_installation_date?: string | null;
   status: InstallationStatus;
   created_by: User | null;
   assigned_engineer: User | null;
