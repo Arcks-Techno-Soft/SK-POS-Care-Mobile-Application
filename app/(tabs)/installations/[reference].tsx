@@ -750,7 +750,7 @@ function WorkflowSection({
       value: String(e.id),
       sublabel:
         (e.role === 'MANAGER' ? 'Manager · ' : e.role === 'SALES' ? 'Sales rep · ' : '') +
-        engineerLoadLabel(e.open_ticket_count, e.role !== 'MANAGER') +
+        engineerLoadLabel(e, e.role !== 'MANAGER') +
         (e.district ? ` · ${e.district}` : ''),
     }));
 

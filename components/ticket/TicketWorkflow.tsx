@@ -175,7 +175,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
       value: String(e.id),
       sublabel:
         (e.role === 'MANAGER' ? 'Manager · ' : e.role === 'SALES' ? 'Sales rep · ' : '') +
-        engineerLoadLabel(e.open_ticket_count, e.role !== 'MANAGER') +
+        engineerLoadLabel(e, e.role !== 'MANAGER') +
         (e.district ? ` · ${e.district}` : ''),
     }));
 
@@ -289,7 +289,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                 value: String(e.id),
                 sublabel:
                   (e.role === 'MANAGER' ? 'Manager · ' : e.role === 'SALES' ? 'Sales rep · ' : '') +
-                  engineerLoadLabel(e.open_ticket_count, e.role !== 'MANAGER') +
+                  engineerLoadLabel(e, e.role !== 'MANAGER') +
                   (e.district ? ` · ${e.district}` : ''),
               }))}
               onChange={setPickedEngineer}
@@ -368,7 +368,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                       value: String(e.id),
                       sublabel:
         (e.role === 'MANAGER' ? 'Manager · ' : e.role === 'SALES' ? 'Sales rep · ' : '') +
-        engineerLoadLabel(e.open_ticket_count, e.role !== 'MANAGER') +
+        engineerLoadLabel(e, e.role !== 'MANAGER') +
         (e.district ? ` · ${e.district}` : ''),
                     }))}
                   onChange={setPickedEngineer}
@@ -462,7 +462,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                           value: String(e.id),
                           sublabel:
         (e.role === 'MANAGER' ? 'Manager · ' : e.role === 'SALES' ? 'Sales rep · ' : '') +
-        engineerLoadLabel(e.open_ticket_count, e.role !== 'MANAGER') +
+        engineerLoadLabel(e, e.role !== 'MANAGER') +
         (e.district ? ` · ${e.district}` : ''),
                         }))}
                       onChange={setPickedEngineer}
