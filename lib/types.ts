@@ -36,9 +36,14 @@ export interface User {
   /** When true, this user can be credited as a sales rep on installations,
    * regardless of role. SALES-role users are eligible without this flag. */
   is_sales_rep?: boolean;
-  /** Active (not-closed) tickets assigned to this engineer — set on the
-   * /engineers picker list so the UI can recommend the least-busy engineers. */
+  /** Open workload total (service calls + installations) — set on the
+   * /engineers picker list so the UI can recommend the least-busy engineers.
+   * Counts only jobs still needing a visit; work awaiting sign-off is done. */
   open_ticket_count?: number;
+  /** Service calls (tickets) inside that total — as primary or co-engineer. */
+  open_service_call_count?: number;
+  /** Installations inside that total. */
+  open_installation_count?: number;
 }
 
 export interface TokenResponse {

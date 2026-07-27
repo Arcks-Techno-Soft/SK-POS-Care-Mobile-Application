@@ -141,36 +141,65 @@ export const INDIAN_STATES = [
   'Puducherry',
 ];
 
-/** Caption describing an engineer's current workload for the assign picker.
- *  Workload = open tickets + pending installations (see backend EngineerOption).
- *  Managers are assignable but are a fallback (not the default pick), so pass
- *  `recommendable = false` for them to suppress the "recommended" wording. */
-export function engineerLoadLabel(count?: number | null, recommendable = true): string {
-  const n = count ?? 0;
-  if (n === 0) return recommendable ? 'Available — recommended' : 'No open jobs';
-  return `${n} open job${n === 1 ? '' : 's'}`;
-}
-
 type EngineerLike = {
   open_ticket_count?: number;
+  open_service_call_count?: number;
+  open_installation_count?: number;
   district?: string | null;
   name: string;
+  username?: string;
   role?: string;
 };
+
+/** Sample/test accounts are prefixed TEST (name or username) — e.g.
+ *  "TEST_Sales Rep" / "test_engg" / "Test Manager". They stay selectable but
+ *  belong at the very bottom so a real engineer is never displaced by one,
+ *  and they are never suggested as the recommended pick. */
+const isTestAccount = (e: EngineerLike) => {
+  const test = /^test[\s_\-.]/;
+  return test.test((e.name ?? '').trim().toLowerCase())
+    || test.test((e.username ?? '').trim().toLowerCase());
+};
+
+/** Caption describing an engineer's current workload for the assign picker,
+ *  e.g. "13 open jobs (SC-7 / INS-6)" — SC = service calls (tickets),
+ *  INS = installations. Only jobs still needing a visit count; see the backend
+ *  EngineerOption. The bracket is dropped if the API didn't send the split
+ *  (older backend), leaving the plain total.
+ *  Managers are assignable but are a fallback (not the default pick), so pass
+ *  `recommendable = false` for them to suppress the "recommended" wording. */
+export function engineerLoadLabel(e: EngineerLike, recommendable = true): string {
+  const n = e.open_ticket_count ?? 0;
+  if (n === 0) {
+    return recommendable && !isTestAccount(e) ? 'Available — recommended' : 'No open jobs';
+  }
+  const hasSplit =
+    e.open_service_call_count !== undefined || e.open_installation_count !== undefined;
+  const split = hasSplit
+    ? ` (SC-${e.open_service_call_count ?? 0} / INS-${e.open_installation_count ?? 0})`
+    : '';
+  return `${n} open job${n === 1 ? '' : 's'}${split}`;
+}
 
 /** Managers can be assigned (they sometimes work jobs themselves) but sink
  *  below engineers/sales in the picker so engineers stay the default pick. */
 const isManagerRole = (e: EngineerLike) => (e.role ?? '').toUpperCase() === 'MANAGER';
 
 /** Returns a comparator that sorts engineers for the assign picker:
- *  1. engineers whose district matches the job's area first (case-insensitive),
- *  2. non-managers before managers (managers are a fallback assignee),
- *  3. then least-busy (fewest open tickets + installations),
- *  4. then alphabetically.
+ *  1. test accounts always last, whatever their district or load,
+ *  2. engineers whose district matches the job's area first (case-insensitive),
+ *  3. non-managers before managers (managers are a fallback assignee),
+ *  4. then least-busy (fewest open service calls + installations),
+ *  5. then alphabetically.
  *  Pass the job's city (tickets/installations carry no district field). */
 export function byEngineerAvailability(targetArea?: string | null) {
   const target = targetArea?.trim().toLowerCase() || null;
   return (a: EngineerLike, b: EngineerLike): number => {
+    // Checked before district so a test account can't ride a district match
+    // to the top of the list.
+    const aTest = isTestAccount(a) ? 1 : 0;
+    const bTest = isTestAccount(b) ? 1 : 0;
+    if (aTest !== bTest) return aTest - bTest;
     if (target) {
       const aLocal = (a.district ?? '').trim().toLowerCase() === target ? 0 : 1;
       const bLocal = (b.district ?? '').trim().toLowerCase() === target ? 0 : 1;
