@@ -188,6 +188,7 @@ export default function AnalyticsScreen() {
           <View style={styles.kpiGrid}>
             <KpiCard label="Total" value={kpis?.total_tickets ?? 0} />
             <KpiCard label="Open" value={kpis?.open_tickets ?? 0} tone="warn" />
+            <KpiCard label="On hold" value={kpis?.on_hold_tickets ?? 0} tone="warn" />
             <KpiCard label="Resolved" value={kpis?.resolved_tickets ?? 0} tone="success" />
             <KpiCard label="Closed" value={kpis?.closed_tickets ?? 0} tone="neutral" />
           </View>

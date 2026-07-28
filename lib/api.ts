@@ -299,6 +299,21 @@ export class Api {
     return this.request('POST', `/admin/tickets/${reference}/self-assign`);
   }
 
+  /** Manager/Admin/Owner: park a ticket. Status and assignee are untouched —
+   *  it just stops counting toward open jobs and freezes until resumed. */
+  holdTicket(reference: string, reason: string): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/hold`, {
+      json: { reason },
+    });
+  }
+
+  /** Manager/Admin/Owner: lift a hold; work continues where it stopped. */
+  resumeTicket(reference: string, note?: string): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/resume`, {
+      json: { note: note ?? null },
+    });
+  }
+
   /** Credit (or clear, with null) the sales rep for this service call. */
   setTicketSalesRep(reference: string, salesRepId: number | null): Promise<TicketDetail> {
     return this.request('PATCH', `/admin/tickets/${reference}/sales-rep`, {
@@ -760,6 +775,20 @@ export class Api {
 
   selfAssignInstallation(reference: string): Promise<InstallationDetail> {
     return this.request('POST', `/admin/installations/${reference}/self-assign`);
+  }
+
+  /** Manager/Admin/Owner: park an installation. Mirrors holdTicket. */
+  holdInstallation(reference: string, reason: string): Promise<InstallationDetail> {
+    return this.request('POST', `/admin/installations/${reference}/hold`, {
+      json: { reason },
+    });
+  }
+
+  /** Manager/Admin/Owner: lift a hold on an installation. */
+  resumeInstallation(reference: string, note?: string): Promise<InstallationDetail> {
+    return this.request('POST', `/admin/installations/${reference}/resume`, {
+      json: { note: note ?? null },
+    });
   }
 
   /* -------- installation sub-engineers (shared district roster) -------- */

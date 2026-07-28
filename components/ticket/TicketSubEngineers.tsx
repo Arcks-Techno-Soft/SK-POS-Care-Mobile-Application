@@ -27,8 +27,8 @@ export default function TicketSubEngineers({ reference, ticket }: Props) {
     <SubEngineersSection
       reference={reference}
       ops={ops}
-      operable={ticketIsOperable(ticket.status)}
-      lockReason={ticketLockReason(ticket.status)}
+      operable={ticketIsOperable(ticket.status, ticket.on_hold)}
+      lockReason={ticketLockReason(ticket.status, ticket.on_hold)}
       entityLabel="ticket"
     />
   );

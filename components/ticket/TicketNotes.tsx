@@ -59,7 +59,7 @@ export default function TicketNotes({ reference, ticket }: Props) {
   };
 
   const notes = notesQuery.data ?? [];
-  const operable = ticketIsOperable(ticket.status);
+  const operable = ticketIsOperable(ticket.status, ticket.on_hold);
 
   return (
     <Section title="Work notes" subtitle={notes.length ? `${notes.length} note${notes.length === 1 ? '' : 's'}` : undefined}>
@@ -121,7 +121,7 @@ export default function TicketNotes({ reference, ticket }: Props) {
             />
           </View>
         ) : (
-          <Text style={styles.empty}>{ticketLockReason(ticket.status)}</Text>
+          <Text style={styles.empty}>{ticketLockReason(ticket.status, ticket.on_hold)}</Text>
         )}
       </View>
     </Section>

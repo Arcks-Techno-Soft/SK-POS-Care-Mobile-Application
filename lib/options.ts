@@ -61,6 +61,11 @@ export function isAdminLevel(role?: Role | string | null): boolean {
   return role === 'ADMIN' || isSuperAdmin(role);
 }
 
+/** The common Manager-or-above gate (acknowledge, assign, hold/resume). */
+export function isAdminOrManager(role?: Role | string | null): boolean {
+  return role === 'MANAGER' || isAdminLevel(role);
+}
+
 export const BUSINESS_TYPES = [
   'Restaurant',
   'Hotel',
@@ -248,13 +253,42 @@ export function prettyEnum(value: string): string {
  * Whether work operations (notes, sub-engineers, spares, shipments) may be
  * performed on a ticket. Allowed only between the engineer accepting the
  * ticket and the ticket being closed — i.e. ACCEPTED, RESOLVING, RESOLVED.
+ *
+ * `onHold` is passed separately because hold is an overlay: a parked ticket
+ * keeps its ACCEPTED/RESOLVING status but the backend 409s every action on it.
  */
-export function ticketIsOperable(status: TicketStatus): boolean {
+export function ticketIsOperable(status: TicketStatus, onHold?: boolean): boolean {
+  if (onHold) return false;
   return status === 'ACCEPTED' || status === 'RESOLVING' || status === 'RESOLVED';
 }
 
 /** Short explanation of why a ticket's operations are locked. */
-export function ticketLockReason(status: TicketStatus): string {
+export function ticketLockReason(status: TicketStatus, onHold?: boolean): string {
+  if (onHold) return 'This ticket is on hold — a Manager or Admin must resume it.';
   if (status === 'CLOSED') return 'This ticket is closed — no further changes.';
   return 'Available once the assigned engineer accepts the ticket.';
+}
+
+/**
+ * Whether a job may be parked, and by whom. Manager/Admin/Owner only, and only
+ * while field work is still outstanding — RESOLVED/COMPLETED are done bar the
+ * signature, and already don't count toward anyone's open jobs.
+ */
+export function canHoldTicket(role: string, status: TicketStatus, onHold?: boolean): boolean {
+  if (onHold || !isAdminOrManager(role)) return false;
+  return ['OPEN', 'ACKNOWLEDGED', 'ASSIGNED', 'ACCEPTED', 'RESOLVING'].includes(status);
+}
+
+export function canHoldInstallation(
+  role: string,
+  status: InstallationStatus,
+  onHold?: boolean
+): boolean {
+  if (onHold || !isAdminOrManager(role)) return false;
+  return status === 'NEW' || status === 'ASSIGNED';
+}
+
+/** Resuming is the same audience as holding, whatever the stage. */
+export function canResumeJob(role: string, onHold?: boolean): boolean {
+  return !!onHold && isAdminOrManager(role);
 }

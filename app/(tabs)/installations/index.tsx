@@ -205,10 +205,15 @@ function InstallationCard({
     <Card onPress={onPress} style={styles.card}>
       <View style={styles.cardTop}>
         <Text style={styles.ref}>{installation.reference}</Text>
-        <Badge
-          label={prettyEnum(installation.status)}
-          tone={statusTone(installation.status)}
-        />
+        <View style={styles.cardBadges}>
+          {/* Hold sits NEXT TO the status badge — a held installation still has
+              a real workflow status worth showing. */}
+          {installation.on_hold && <Badge label="On hold" tone="warn" />}
+          <Badge
+            label={prettyEnum(installation.status)}
+            tone={statusTone(installation.status)}
+          />
+        </View>
       </View>
       <Text style={styles.business} numberOfLines={1}>
         {installation.business_name}
@@ -257,6 +262,7 @@ const styles = StyleSheet.create({
   placeholder: { paddingTop: spacing.xxxl * 2 },
 
   card: { gap: 3 },
+  cardBadges: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   cardTop: {
     flexDirection: 'row',
     alignItems: 'center',

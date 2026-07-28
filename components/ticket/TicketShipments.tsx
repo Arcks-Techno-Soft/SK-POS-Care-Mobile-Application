@@ -53,7 +53,7 @@ export default function TicketShipments({ reference, ticket }: Props) {
   const [deliveringId, setDeliveringId] = useState<number | null>(null);
 
   const shipments = shipmentsQuery.data ?? [];
-  const operable = ticketIsOperable(ticket.status);
+  const operable = ticketIsOperable(ticket.status, ticket.on_hold);
 
   const markDelivered = async (shipmentId: number) => {
     setDeliveringId(shipmentId);
@@ -138,7 +138,7 @@ export default function TicketShipments({ reference, ticket }: Props) {
             onPress={() => setAddOpen(true)}
           />
         ) : (
-          <Text style={styles.empty}>{ticketLockReason(ticket.status)}</Text>
+          <Text style={styles.empty}>{ticketLockReason(ticket.status, ticket.on_hold)}</Text>
         )}
       </View>
 

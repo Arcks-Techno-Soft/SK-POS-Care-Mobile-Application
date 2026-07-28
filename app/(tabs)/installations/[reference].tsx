@@ -16,6 +16,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { AttachmentGallery } from '@/components/AttachmentGallery';
+import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
 import { AttemptsSection } from '@/components/AttemptsSection';
 import InstallationSubEngineers from '@/components/installation/InstallationSubEngineers';
 import { PhotoPicker } from '@/components/PhotoPicker';
@@ -171,10 +172,12 @@ export default function InstallationDetailScreen() {
             attempts={installation.attempts}
             canWork={
               installation.status === 'ASSIGNED' &&
+              !installation.on_hold &&
               (canManage || installation.assigned_engineer?.id === user?.id)
             }
             canStart={
               installation.status === 'ASSIGNED' &&
+              !installation.on_hold &&
               (canManage || installation.assigned_engineer?.id === user?.id)
             }
             onStartAttempt={async () => {
@@ -703,6 +706,14 @@ function WorkflowSection({
     installation.sales_rep ? String(installation.sales_rep.id) : null,
   );
   const [savingSalesRep, setSavingSalesRep] = useState(false);
+  // Hold sheet — a reason is mandatory, matching the backend.
+  const [holdOpen, setHoldOpen] = useState(false);
+  const [holdReason, setHoldReason] = useState('');
+  const [holdBusy, setHoldBusy] = useState(false);
+  const [holdError, setHoldError] = useState<string | null>(null);
+
+  // Hold is an overlay on `status`, so it's checked separately everywhere.
+  const onHold = !!installation.on_hold;
 
   // Finishing requires at least one completed attempt and none still open.
   const openAttempt = installation.attempts.find((a) => !a.ended_at) ?? null;
@@ -824,6 +835,51 @@ function WorkflowSection({
     }
   };
 
+  const submitHold = async () => {
+    const reason = holdReason.trim();
+    if (reason.length < 3) {
+      setHoldError('Give a short reason — it shows on the installation.');
+      return;
+    }
+    setHoldBusy(true);
+    setHoldError(null);
+    try {
+      await api.holdInstallation(installation.reference, reason);
+      setHoldOpen(false);
+      setHoldReason('');
+      onReload();
+    } catch (e) {
+      setHoldError(e instanceof ApiError ? e.message : (e as Error).message);
+    } finally {
+      setHoldBusy(false);
+    }
+  };
+
+  const handleResume = () => {
+    Alert.alert(
+      'Resume installation',
+      'This goes back onto the assignee’s open jobs and restarts its reminders.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Resume',
+          onPress: async () => {
+            setBanner(null);
+            setHoldBusy(true);
+            try {
+              await api.resumeInstallation(installation.reference);
+              onReload();
+            } catch (e) {
+              setBanner(e instanceof ApiError ? e.message : (e as Error).message);
+            } finally {
+              setHoldBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleComplete = async () => {
     Alert.alert('Finish installation', 'Confirm that the installation is complete? You’ll capture the customer signature next.', [
       { text: 'Cancel', style: 'cancel' },
@@ -850,7 +906,34 @@ function WorkflowSection({
     <Section title="Workflow">
       {banner && <Banner message={banner} tone="danger" />}
 
-      {installation.status === 'NEW' && canManage && (
+      {/* Parked by a Manager/Admin. The controls below are hidden because the
+          backend 409s every one of them while held. */}
+      {onHold && (
+        <View style={styles.holdCard}>
+          <Text style={styles.holdTitle}>On hold</Text>
+          {installation.hold_reason ? (
+            <Text style={styles.holdReason}>{installation.hold_reason}</Text>
+          ) : null}
+          <Text style={styles.holdHint}>
+            {installation.held_by?.name
+              ? `Put on hold by ${installation.held_by.name}. `
+              : ''}
+            Work is frozen and this installation isn’t counted in anyone’s open
+            jobs.
+          </Text>
+          {canManage && (
+            <Button
+              title="Resume installation"
+              icon="play-circle-outline"
+              loading={holdBusy}
+              onPress={handleResume}
+              style={{ marginTop: spacing.sm }}
+            />
+          )}
+        </View>
+      )}
+
+      {!onHold && installation.status === 'NEW' && canManage && (
         <View style={styles.workflowBlock}>
           <Select
             label="Assign to"
@@ -879,7 +962,7 @@ function WorkflowSection({
         </View>
       )}
 
-      {installation.status === 'ASSIGNED' && (isAssignee || canManage) && (
+      {!onHold && installation.status === 'ASSIGNED' && (isAssignee || canManage) && (
         <View style={styles.workflowBlock}>
           {/* Only the assigned engineer (or self-assigned manager) finishes. */}
           {isAssignee &&
@@ -936,6 +1019,73 @@ function WorkflowSection({
       {installation.status === 'CLOSED' && (
         <Text style={styles.workflowNote}>Installation is closed.</Text>
       )}
+
+      {/* Parking the job — the exception, not the expected next step. */}
+      {canManage &&
+        !onHold &&
+        (installation.status === 'NEW' || installation.status === 'ASSIGNED') && (
+          <View style={styles.reassignBlock}>
+            <Text style={styles.reassignHint}>
+              Park this installation while it’s blocked. It stops counting toward
+              the engineer’s open jobs and pauses the upcoming-installation
+              reminder until you resume it.
+            </Text>
+            <Button
+              title="Put on hold"
+              icon="pause-circle-outline"
+              variant="secondary"
+              onPress={() => setHoldOpen(true)}
+              loading={holdBusy}
+            />
+          </View>
+        )}
+
+      {/* Hold sheet — reason is mandatory (the backend enforces min 3 chars). */}
+      <Modal
+        visible={holdOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setHoldOpen(false)}
+      >
+        <KeyboardAwareSheet>
+          <Pressable style={styles.holdBackdrop} onPress={() => setHoldOpen(false)}>
+            <Pressable style={styles.holdSheet} onPress={(e) => e.stopPropagation()}>
+              <Text style={styles.holdSheetTitle}>Put installation on hold</Text>
+              <Text style={styles.holdSheetHint}>
+                Work is frozen until a Manager or Admin resumes it. The assignee
+                and current stage are kept.
+              </Text>
+              <Field
+                value={holdReason}
+                onChangeText={(t) => {
+                  setHoldReason(t);
+                  if (holdError) setHoldError(null);
+                }}
+                placeholder="e.g. customer premises not ready"
+                multiline
+                error={holdError ?? undefined}
+              />
+              <View style={styles.holdSheetActions}>
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => setHoldOpen(false)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Put on hold"
+                  fullWidth={false}
+                  loading={holdBusy}
+                  onPress={submitHold}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAwareSheet>
+      </Modal>
 
       {/* Sales representative — Admin/Manager credit who sourced the deal */}
       {canManage && installation.status !== 'CLOSED' && (
@@ -1405,6 +1555,30 @@ function ActivitySection({
 /* ─── Styles ─── */
 
 const styles = StyleSheet.create({
+  holdCard: {
+    backgroundColor: colors.warnSoft,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  holdTitle: { fontSize: fontSize.sm, fontWeight: '700', color: colors.warn },
+  holdReason: { fontSize: fontSize.md, color: colors.ink, lineHeight: 21 },
+  holdHint: { fontSize: fontSize.sm, color: colors.warn, lineHeight: 19 },
+  holdBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  holdSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  holdSheetTitle: { fontSize: fontSize.lg, fontWeight: '700', color: colors.ink },
+  holdSheetHint: { fontSize: fontSize.sm, color: colors.inkSubtle, lineHeight: 19 },
+  holdSheetActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   root: { flex: 1, backgroundColor: colors.surfaceRaised },
   content: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
 
