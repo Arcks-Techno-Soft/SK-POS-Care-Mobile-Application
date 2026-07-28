@@ -471,6 +471,8 @@ export interface ResolutionTrendPoint {
 export interface AnalyticsKpis {
   total_tickets: number;
   open_tickets: number;
+  /** Held jobs are excluded from open_tickets and counted here instead. */
+  on_hold_tickets?: number;
   resolved_tickets: number;
   closed_tickets: number;
   /** Tickets created inside the window. */
