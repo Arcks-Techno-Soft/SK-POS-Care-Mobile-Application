@@ -143,6 +143,12 @@ export interface TicketDetail {
   status: TicketStatus;
   warranty_status: WarrantyStatus;
   service_type: ServiceType;
+  // On hold — an overlay on `status`, so `status` still reads ASSIGNED /
+  // RESOLVING etc. while parked. Gates every workflow action.
+  on_hold?: boolean;
+  held_at?: string | null;
+  held_by?: User | null;
+  hold_reason?: string | null;
   // Third-party support details (only for THIRD_PARTY_SUPPORT tickets).
   third_party_device_name?: string | null;
   third_party_issue_info?: string | null;
@@ -207,6 +213,9 @@ export interface TicketListItem {
   status: TicketStatus;
   warranty_status: WarrantyStatus;
   service_type: ServiceType;
+  // On-hold overlay — the list badges these rather than hiding them.
+  on_hold?: boolean;
+  hold_reason?: string | null;
   raised_by: User | null;
   assigned_engineer: User | null;
   created_at: string;
@@ -333,6 +342,12 @@ export interface InstallationDetail {
   products_for_installation: string | null;
   invoice_document: InvoiceDocument | null;
   status: InstallationStatus;
+  // On hold — an overlay on `status`, so `status` still reads NEW /
+  // ASSIGNED while parked. Gates every workflow action.
+  on_hold?: boolean;
+  held_at?: string | null;
+  held_by?: User | null;
+  hold_reason?: string | null;
   address_line1: string | null;
   address_line2: string | null;
   address_line3: string | null;
@@ -383,6 +398,9 @@ export interface InstallationListItem {
   phone: string;
   invoice_number: string;
   status: InstallationStatus;
+  // On-hold overlay — the list badges these rather than hiding them.
+  on_hold?: boolean;
+  hold_reason?: string | null;
   created_by: User | null;
   assigned_engineer: User | null;
   sales_rep: User | null;

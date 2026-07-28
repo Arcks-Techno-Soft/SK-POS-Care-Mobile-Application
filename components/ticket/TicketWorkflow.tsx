@@ -11,7 +11,14 @@ import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
-import { byEngineerAvailability, engineerLoadLabel, isAdminLevel, isSuperAdmin } from '@/lib/options';
+import {
+  byEngineerAvailability,
+  canHoldTicket,
+  canResumeJob,
+  engineerLoadLabel,
+  isAdminLevel,
+  isSuperAdmin,
+} from '@/lib/options';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type { ChargesSummary, TicketDetail, User } from '@/lib/types';
@@ -47,6 +54,11 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   );
   const [savingSalesRep, setSavingSalesRep] = useState(false);
 
+  // Hold sheet — a reason is mandatory, matching the backend.
+  const [holdOpen, setHoldOpen] = useState(false);
+  const [holdReason, setHoldReason] = useState('');
+  const [holdError, setHoldError] = useState<string | null>(null);
+
   const [resolveOpen, setResolveOpen] = useState(false);
   const [summary, setSummary] = useState('');
   const [resolveError, setResolveError] = useState<string | null>(null);
@@ -74,6 +86,11 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
     }
   };
 
+  // Hold is an overlay on `status`, so it's checked separately everywhere.
+  const onHold = !!ticket.on_hold;
+  const showHold = canHoldTicket(user?.role ?? '', ticket.status, ticket.on_hold);
+  const showResume = canResumeJob(user?.role ?? '', ticket.on_hold);
+
   const isManagerOrAdmin = user?.role === 'MANAGER' || isAdminLevel(user?.role);
   const assignedToMe =
     ticket.assigned_engineer != null && ticket.assigned_engineer.id === user?.id;
@@ -82,6 +99,41 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const warrantyUnknown = ticket.warranty_status === 'UNKNOWN';
   // Remote support resolves and closes in one step — no signatures or PDF.
   const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
+
+  const submitHold = async () => {
+    const reason = holdReason.trim();
+    if (reason.length < 3) {
+      setHoldError('Give a short reason — it shows on the ticket.');
+      return;
+    }
+    setBusy(true);
+    setHoldError(null);
+    try {
+      await api.holdTicket(reference, reason);
+      setHoldOpen(false);
+      setHoldReason('');
+      reload();
+      refreshPending();
+    } catch (e) {
+      setHoldError(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmResume = () => {
+    Alert.alert(
+      'Resume ticket',
+      'This goes back onto the assignee\u2019s open jobs and restarts its SLA clock.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Resume',
+          onPress: () => run(() => api.resumeTicket(reference)),
+        },
+      ],
+    );
+  };
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -262,6 +314,33 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   return (
     <Section title="Workflow">
       <View style={styles.body}>
+        {/* Parked by a Manager/Admin. Every workflow control below is hidden
+            because the backend 409s all of them while held. */}
+        {onHold && (
+          <View style={styles.holdCard}>
+            <Text style={styles.holdTitle}>On hold</Text>
+            {ticket.hold_reason ? (
+              <Text style={styles.holdReason}>{ticket.hold_reason}</Text>
+            ) : null}
+            <Text style={styles.holdHint}>
+              {ticket.held_by?.name ? `Put on hold by ${ticket.held_by.name}. ` : ''}
+              Work is frozen and this ticket isn&apos;t counted in anyone&apos;s
+              open jobs.
+            </Text>
+            {showResume && (
+              <Button
+                title="Resume ticket"
+                icon="play-circle-outline"
+                loading={busy}
+                onPress={confirmResume}
+                style={{ marginTop: spacing.sm }}
+              />
+            )}
+          </View>
+        )}
+
+        {!onHold && (
+          <>
         {ticket.status === 'OPEN' && (
           <Button
             title="Acknowledge ticket"
@@ -584,6 +663,26 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
             />
           </View>
         )}
+          </>
+        )}
+
+        {/* Parking the job — the exception, not the expected next step. */}
+        {showHold && (
+          <View style={styles.holdAction}>
+            <Text style={styles.holdActionHint}>
+              Park this ticket while it&apos;s blocked. It stops counting toward
+              the engineer&apos;s open jobs and its SLA clock pauses until you
+              resume it.
+            </Text>
+            <Button
+              title="Put on hold"
+              icon="pause-circle-outline"
+              variant="secondary"
+              loading={busy}
+              onPress={() => setHoldOpen(true)}
+            />
+          </View>
+        )}
 
         {/* Actor / timestamp trail */}
         <View style={styles.trail}>
@@ -622,6 +721,54 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
           )}
         </View>
       </View>
+
+      {/* Hold modal — reason is mandatory (the backend enforces min 3 chars). */}
+      <Modal
+        visible={holdOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setHoldOpen(false)}
+      >
+        <KeyboardAwareSheet>
+          <Pressable style={styles.backdrop} onPress={() => setHoldOpen(false)}>
+            <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+              <Text style={styles.sheetTitle}>Put ticket on hold</Text>
+              <Text style={styles.sheetHint}>
+                Work is frozen until a Manager or Admin resumes it. The assignee
+                and current stage are kept, so resuming picks up where this left
+                off.
+              </Text>
+              <Field
+                value={holdReason}
+                onChangeText={(t) => {
+                  setHoldReason(t);
+                  if (holdError) setHoldError(null);
+                }}
+                placeholder="e.g. waiting on a spare part from the vendor"
+                multiline
+                error={holdError ?? undefined}
+              />
+              <View style={styles.sheetActions}>
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => setHoldOpen(false)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Put on hold"
+                  fullWidth={false}
+                  loading={busy}
+                  onPress={submitHold}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAwareSheet>
+      </Modal>
 
       {/* Resolve modal */}
       <Modal
@@ -707,6 +854,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   engineersError: { gap: spacing.sm },
+  holdCard: {
+    backgroundColor: colors.warnSoft,
+    borderRadius: radius.sm,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  holdTitle: { fontSize: fontSize.sm, fontWeight: '700', color: colors.warn },
+  holdReason: { fontSize: fontSize.md, color: colors.ink, lineHeight: 21 },
+  holdHint: { fontSize: fontSize.sm, color: colors.warn, lineHeight: 19 },
+  holdAction: { gap: spacing.sm },
+  holdActionHint: { fontSize: fontSize.sm, color: colors.inkSubtle, lineHeight: 19 },
   reassign: {
     gap: spacing.sm,
     marginTop: spacing.sm,

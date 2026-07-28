@@ -65,7 +65,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
   const [payOpen, setPayOpen] = useState(false);
 
   const charges = chargesQuery.data;
-  const operable = ticketIsOperable(ticket.status);
+  const operable = ticketIsOperable(ticket.status, ticket.on_hold);
   // A Super Admin may correct the invoice (service fee + spares) at ANY status,
   // including after the ticket is CLOSED — a post-close billing correction the
   // backend now allows. Everyone else is held to the normal operable window.
@@ -226,7 +226,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
                   onPress={() => setAddOpen(true)}
                 />
               ) : (
-                <Text style={styles.hint}>{ticketLockReason(ticket.status)}</Text>
+                <Text style={styles.hint}>{ticketLockReason(ticket.status, ticket.on_hold)}</Text>
               )}
             </View>
             )}
