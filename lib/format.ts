@@ -18,6 +18,51 @@ export function formatDate(iso: string | null | undefined): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/** Parse a bare "yyyy-mm-dd" as a LOCAL calendar date.
+ *
+ *  `new Date("2026-07-20")` is spec'd to parse as UTC midnight, which renders
+ *  as the *previous* day on any device west of UTC. Date-only API fields
+ *  (e.g. `expected_installation_date`) must go through this, not `parse`. */
+export function parseISODate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** A local `Date` back to "yyyy-mm-dd" (never shifts across the timezone). */
+export function toISODate(d: Date): string {
+  const mm = `${d.getMonth() + 1}`.padStart(2, '0');
+  const dd = `${d.getDate()}`.padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/** Today as "yyyy-mm-dd" in the device's timezone. */
+export function todayISO(): string {
+  return toISODate(new Date());
+}
+
+/** "20 May 2026" from a date-only "2026-05-20" — timezone-safe. */
+export function formatDateOnly(value: string | null | undefined): string {
+  const d = parseISODate(value);
+  if (!d) return '—';
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** "today" / "tomorrow" / "in 3 days" / "2 days ago" for a date-only value. */
+export function dateOnlyRelative(value: string | null | undefined): string | null {
+  const d = parseISODate(value);
+  if (!d) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (days === 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  if (days === -1) return 'yesterday';
+  return days > 1 ? `in ${days} days` : `${-days} days ago`;
+}
+
 /** "20 May 2026, 2:30 PM" */
 export function formatDateTime(iso: string | null | undefined): string {
   const d = parse(iso);

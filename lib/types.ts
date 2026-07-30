@@ -348,6 +348,9 @@ export interface InstallationDetail {
   email: string | null;
   invoice_number: string;
   products_for_installation: string | null;
+  /** Planned on-site date, "yyyy-mm-dd". Drives the upcoming-installation
+   *  WhatsApp reminder to Super Admin / Admin / Managers. Null until set. */
+  expected_installation_date?: string | null;
   invoice_document: InvoiceDocument | null;
   status: InstallationStatus;
   // On hold — an overlay on `status`, so `status` still reads NEW /
@@ -405,6 +408,8 @@ export interface InstallationListItem {
   contact_name: string;
   phone: string;
   invoice_number: string;
+  /** Planned on-site date, "yyyy-mm-dd", or null if none is set yet. */
+  expected_installation_date?: string | null;
   status: InstallationStatus;
   // On-hold overlay — the list badges these rather than hiding them.
   on_hold?: boolean;

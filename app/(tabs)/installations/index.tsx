@@ -16,7 +16,7 @@ import { EmptyState, ErrorView } from '@/components/States';
 import { Badge, Card, Chip, Field } from '@/components/ui/kit';
 import { Select } from '@/components/ui/Select';
 import { useApi, useAuth } from '@/lib/auth';
-import { timeAgo } from '@/lib/format';
+import { dateOnlyRelative, formatDateOnly, timeAgo } from '@/lib/format';
 import { useDebounced } from '@/lib/hooks';
 import { INSTALLATION_STATUSES, prettyEnum } from '@/lib/options';
 import { colors, fontSize, spacing, statusTone } from '@/lib/theme';
@@ -227,6 +227,18 @@ function InstallationCard({
       <Text style={styles.meta} numberOfLines={1}>
         Invoice: <Text style={styles.mono}>{installation.invoice_number}</Text>
       </Text>
+      {installation.expected_installation_date ? (
+        <View style={styles.dateRow}>
+          <Ionicons name="calendar-outline" size={13} color={colors.inkSubtle} />
+          <Text style={styles.meta} numberOfLines={1}>
+            Expected {formatDateOnly(installation.expected_installation_date)}
+            <Text style={styles.dateRel}>
+              {' · '}
+              {dateOnlyRelative(installation.expected_installation_date)}
+            </Text>
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.cardBottom}>
         <View style={styles.assignRow}>
           <Ionicons
@@ -278,6 +290,8 @@ const styles = StyleSheet.create({
   business: { fontSize: fontSize.lg, fontWeight: '600', color: colors.ink, marginTop: 2 },
   meta: { fontSize: fontSize.sm, color: colors.inkSubtle },
   mono: { fontFamily: 'monospace' },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dateRel: { color: colors.info, fontWeight: '600' },
   cardBottom: {
     flexDirection: 'row',
     alignItems: 'center',

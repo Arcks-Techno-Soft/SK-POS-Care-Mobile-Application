@@ -22,6 +22,7 @@ import InstallationSubEngineers from '@/components/installation/InstallationSubE
 import { PhotoPicker } from '@/components/PhotoPicker';
 import { SignaturePad } from '@/components/SignaturePad';
 import { ErrorView, Loading } from '@/components/States';
+import { DateField } from '@/components/ui/DateField';
 import { Badge, Banner, Button, Card, Divider, Field, KeyValue } from '@/components/ui/kit';
 import { Section } from '@/components/ui/Section';
 import { Select } from '@/components/ui/Select';
@@ -29,7 +30,7 @@ import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { pickFromLibrary, takePhoto } from '@/lib/images';
 import { usePendingTickets } from '@/lib/pending-tickets';
-import { formatDateTime, timeAgo } from '@/lib/format';
+import { dateOnlyRelative, formatDateOnly, formatDateTime, timeAgo, todayISO } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
 import {
   byEngineerAvailability,
@@ -145,6 +146,14 @@ export default function InstallationDetailScreen() {
               </>
             ) : null}
             <Divider />
+            <ExpectedDateRow
+              installation={installation}
+              // The API gates this on Admin / Manager, unlike the invoice.
+              canEdit={canManage && installation.status !== 'CLOSED'}
+              api={api}
+              onReload={reloadAndBadge}
+            />
+            <Divider />
             <InvoiceRow
               installation={installation}
               canEdit={canEditInvoice}
@@ -214,6 +223,102 @@ export default function InstallationDetailScreen() {
           <ActivitySection reference={reference} api={api} />
         </KeyboardAwareScrollView>
       ) : null}
+    </View>
+  );
+}
+
+/* ─── Expected installation date (Admin / Manager, editable until CLOSED) ─── */
+
+function ExpectedDateRow({
+  installation,
+  canEdit,
+  api,
+  onReload,
+}: {
+  installation: InstallationDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const current = installation.expected_installation_date ?? null;
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState<string | null>(current);
+  const [saving, setSaving] = useState(false);
+
+  const save = async (next: string | null) => {
+    setSaving(true);
+    try {
+      await api.setInstallationExpectedDate(installation.reference, next);
+      setEditing(false);
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Expected date',
+        e instanceof ApiError ? e.message : 'Could not update the expected date.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    const relative = dateOnlyRelative(current);
+    return (
+      <KeyValue
+        label="Expected Installation"
+        value={
+          <View style={styles.invoiceValueRow}>
+            <Text style={styles.expectedDate}>
+              {current ? formatDateOnly(current) : 'Not scheduled'}
+              {relative ? <Text style={styles.expectedRel}>{`  ${relative}`}</Text> : null}
+            </Text>
+            {canEdit && (
+              <Pressable
+                onPress={() => {
+                  setValue(current);
+                  setEditing(true);
+                }}
+                hitSlop={8}
+              >
+                <Text style={styles.invoiceEdit}>{current ? 'Edit' : 'Set'}</Text>
+              </Pressable>
+            )}
+          </View>
+        }
+      />
+    );
+  }
+
+  return (
+    <View style={styles.invoiceEditBox}>
+      <Text style={styles.invoiceEditLabel}>Expected Installation Date</Text>
+      <DateField
+        value={value}
+        onChange={setValue}
+        placeholder="Not scheduled yet"
+        sheetTitle="Expected Installation Date"
+        helper="Admin and managers get a WhatsApp reminder ahead of this date."
+        minDate={todayISO()}
+      />
+      <View style={styles.invoiceBtnRow}>
+        <Button
+          title="Cancel"
+          variant="secondary"
+          size="sm"
+          fullWidth={false}
+          onPress={() => {
+            setValue(current);
+            setEditing(false);
+          }}
+        />
+        <Button
+          title="Save"
+          size="sm"
+          fullWidth={false}
+          loading={saving}
+          onPress={() => save(value)}
+        />
+      </View>
     </View>
   );
 }
@@ -1609,6 +1714,8 @@ const styles = StyleSheet.create({
   invoiceValueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md },
   invoiceValue: { fontSize: fontSize.sm, color: colors.ink, fontFamily: 'monospace', textAlign: 'right', flexShrink: 1 },
   invoiceEdit: { fontSize: fontSize.sm, color: colors.info, fontWeight: '500' },
+  expectedDate: { fontSize: fontSize.sm, color: colors.ink, textAlign: 'right', flexShrink: 1 },
+  expectedRel: { color: colors.info, fontWeight: '600' },
   docValueWrap: { alignItems: 'flex-end', gap: spacing.xs, flexShrink: 1 },
   docLink: { fontSize: fontSize.sm, color: colors.info, textAlign: 'right' },
   docNone: { fontSize: fontSize.sm, color: colors.inkSubtle },
