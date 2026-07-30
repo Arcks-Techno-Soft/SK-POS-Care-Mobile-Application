@@ -284,7 +284,16 @@ function TicketCard({
       </Text>
       <View style={styles.cardBottom}>
         <View style={styles.badgeRow}>
-          <Badge label={prettyEnum(ticket.severity)} tone={severityTone(ticket.severity)} />
+          {/* A held ticket trades its severity badge for WHY it is parked:
+              nobody is working it, so how urgent it would be matters less
+              than what is blocking it. The "On hold" badge stays up top. */}
+          {ticket.on_hold ? (
+            <Text style={styles.holdReason} numberOfLines={1}>
+              {ticket.hold_reason?.trim() || 'On hold — no reason given'}
+            </Text>
+          ) : (
+            <Badge label={prettyEnum(ticket.severity)} tone={severityTone(ticket.severity)} />
+          )}
           {ticket.warranty_status !== 'UNKNOWN' && (
             <Badge
               label={prettyEnum(ticket.warranty_status)}
@@ -374,7 +383,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
-  badgeRow: { flexDirection: 'row', gap: spacing.sm },
+  // flexShrink so a long hold reason truncates instead of pushing the
+  // timestamp off the card.
+  badgeRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flexShrink: 1 },
+  holdReason: { fontSize: fontSize.xs, color: colors.warn, flexShrink: 1 },
   time: { fontSize: fontSize.xs, color: colors.inkSubtle },
   assignRow: {
     flexDirection: 'row',
