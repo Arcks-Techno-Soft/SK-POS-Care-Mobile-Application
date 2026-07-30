@@ -133,6 +133,9 @@ export default function TicketDetailScreen() {
                 ticket.payment_status === 'PENDING' && (
                   <Badge label="Payment pending" tone="warn" />
                 )}
+              {ticket.status === 'RESOLVED' && ticket.payment_awaiting_verification && (
+                <Badge label="Awaiting verification" tone="info" />
+              )}
             </View>
             <View style={styles.headerMeta}>
               <Text style={styles.ref}>{ticket.reference}</Text>
