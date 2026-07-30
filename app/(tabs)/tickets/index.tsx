@@ -288,7 +288,7 @@ function TicketCard({
               nobody is working it, so how urgent it would be matters less
               than what is blocking it. The "On hold" badge stays up top. */}
           {ticket.on_hold ? (
-            <Text style={styles.holdReason} numberOfLines={1}>
+            <Text style={styles.holdReason} numberOfLines={2}>
               {ticket.hold_reason?.trim() || 'On hold — no reason given'}
             </Text>
           ) : (
@@ -383,10 +383,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: spacing.sm,
   },
-  // flexShrink so a long hold reason truncates instead of pushing the
+  // flexShrink so a long hold reason wraps/clips instead of pushing the
   // timestamp off the card.
   badgeRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center', flexShrink: 1 },
-  holdReason: { fontSize: fontSize.xs, color: colors.warn, flexShrink: 1 },
+  // Two lines: one clipped "Customer not ready to pay th…" is worse than a
+  // second line. Still capped so the card can't grow without bound.
+  holdReason: { fontSize: fontSize.xs, color: colors.warn, flexShrink: 1, lineHeight: 15 },
   time: { fontSize: fontSize.xs, color: colors.inkSubtle },
   assignRow: {
     flexDirection: 'row',
