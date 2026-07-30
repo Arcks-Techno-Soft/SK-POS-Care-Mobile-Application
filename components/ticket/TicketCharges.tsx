@@ -63,6 +63,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [editLine, setEditLine] = useState<ChargeLineItem | null>(null);
   const [payOpen, setPayOpen] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const charges = chargesQuery.data;
   const operable = ticketIsOperable(ticket.status, ticket.on_hold);
@@ -85,7 +86,20 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
     !!ticket.payment_required &&
     ticket.payment_status === 'PENDING' &&
     ticket.status === 'RESOLVED';
-  const paymentCollected = ticket.payment_status === 'COLLECTED';
+  // Collected in full but not yet verified by an Admin — this is what now holds
+  // the ticket in RESOLVED. Falls back to deriving it for a pre-deploy backend.
+  const paymentAwaitingVerification =
+    ticket.payment_awaiting_verification ??
+    (!!ticket.payment_required &&
+      (ticket.payment_status === 'AWAITING_VERIFICATION' ||
+        (ticket.payment_status === 'COLLECTED' && ticket.status !== 'CLOSED')));
+  const paymentVerified =
+    ticket.payment_verified ??
+    (ticket.payment_status === 'VERIFIED' ||
+      (ticket.payment_status === 'COLLECTED' && ticket.status === 'CLOSED'));
+  // Deliberately Admin/Super Admin only — not Manager, and not the engineer who
+  // banked the cash. Mirrors workflow.verify_payment on the backend.
+  const canVerify = isAdminLevel(user?.role);
   // The ticket only *holds* for payment once both signatures are captured;
   // before that, "payment pending" is just an early heads-up.
   const bothSigned =
@@ -103,6 +117,34 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
   // Remote-support tickets have no signatures, so the balance can be collected
   // as soon as they're RESOLVED. Site visits collect after both signatures.
   const canCollectNow = isRemote || (isThirdParty ? engineerSigned : bothSigned);
+
+  // Verifying closes the ticket, so confirm first. No free-text reference here —
+  // a cross-platform prompt isn't available; the web admin has that field.
+  const handleVerifyPayment = () => {
+    Alert.alert(
+      'Verify payment',
+      `Confirm that ${formatINR(amountCollected)} has actually been received. This closes the ticket.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Verify & close',
+          style: 'default',
+          onPress: async () => {
+            setVerifying(true);
+            try {
+              await api.verifyPayment(reference);
+              reload();
+              chargesQuery.reload();
+            } catch (e) {
+              Alert.alert('Payment', errMsg(e));
+            } finally {
+              setVerifying(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <Section title={noSpares ? 'Service charge' : 'Spares & charges'}>
@@ -231,21 +273,55 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
             </View>
             )}
 
-            {/* Out-of-warranty payment: held at RESOLVED until collected. */}
-            {paymentCollected ? (
+            {/* Out-of-warranty payment: held at RESOLVED until collected AND
+                verified by an Admin. */}
+            {paymentVerified ? (
               <View style={{ marginTop: spacing.md }}>
                 <Banner
                   tone="success"
-                  message={`Payment collected${
+                  message={`Payment verified${
                     ticket.payment_amount_inr != null
                       ? ` · ${formatINR(ticket.payment_amount_inr)}`
                       : ''
                   }${
                     ticket.payment_collected_by
-                      ? ` by ${ticket.payment_collected_by.name}`
+                      ? ` · collected by ${ticket.payment_collected_by.name}`
+                      : ''
+                  }${
+                    ticket.payment_verified_by
+                      ? ` · verified by ${ticket.payment_verified_by.name}`
                       : ''
                   }`}
                 />
+              </View>
+            ) : paymentAwaitingVerification ? (
+              <View style={{ marginTop: spacing.md }}>
+                <Divider style={{ marginBottom: spacing.md }} />
+                <View style={styles.feeRow}>
+                  <Badge label="Awaiting payment verification" tone="info" />
+                  <View style={{ flex: 1 }} />
+                </View>
+                <Text style={[styles.meta, { marginTop: spacing.xs }]}>
+                  {formatINR(amountCollected)} recorded as collected
+                  {ticket.payment_collected_by
+                    ? ` by ${ticket.payment_collected_by.name}`
+                    : ''}
+                  . The ticket stays open until an Admin confirms the money was
+                  received.
+                </Text>
+                {canVerify ? (
+                  <Button
+                    title="Verify payment & close"
+                    icon="checkmark-done-outline"
+                    loading={verifying}
+                    onPress={handleVerifyPayment}
+                    style={{ marginTop: spacing.sm }}
+                  />
+                ) : (
+                  <Text style={[styles.meta, { marginTop: spacing.xs }]}>
+                    Only an Admin can verify the payment and close this ticket.
+                  </Text>
+                )}
               </View>
             ) : paymentPending ? (
               <View style={{ marginTop: spacing.md }}>
@@ -265,7 +341,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
                 </View>
                 <Text style={[styles.meta, { marginTop: spacing.xs }]}>
                   {canCollectNow
-                    ? 'Collect the balance to close the ticket. Partial payments keep it open until paid in full.'
+                    ? 'Collect the balance, then an Admin verifies receipt to close the ticket. Partial payments keep it open until paid in full.'
                     : 'Payment due — collect after sign-off.'}
                 </Text>
                 {canCollectNow && canCollect && (
@@ -621,6 +697,12 @@ function CollectPaymentModal({
               {formatINR(pending - Math.round(amount))} will remain pending — the ticket stays open until paid in full.
             </Text>
           )}
+          {validAmount && clearsBalance && (
+            <Text style={styles.sheetHint}>
+              This records the payment but doesn&apos;t close the ticket — an Admin
+              verifies the money was received, then closes it.
+            </Text>
+          )}
           <View style={styles.sheetActions}>
             <Button
               title="Cancel"
@@ -630,7 +712,7 @@ function CollectPaymentModal({
               style={{ flex: 1 }}
             />
             <Button
-              title={clearsBalance ? 'Collect & close' : 'Collect'}
+              title="Collect"
               loading={saving}
               fullWidth={false}
               onPress={submit}

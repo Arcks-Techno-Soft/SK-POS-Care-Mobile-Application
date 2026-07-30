@@ -155,11 +155,19 @@ export interface TicketDetail {
   third_party_ticket_ref?: string | null;
   // Payment tracking. payment_status null = legacy ticket (never gated).
   // payment_required is the backend-computed gate (OOW, or covered + charges).
-  payment_status?: 'PENDING' | 'COLLECTED' | null;
+  // COLLECTED only appears on historical rows; new tickets go
+  // PENDING → AWAITING_VERIFICATION → VERIFIED.
+  payment_status?: 'PENDING' | 'COLLECTED' | 'AWAITING_VERIFICATION' | 'VERIFIED' | null;
   payment_required?: boolean;
   payment_amount_inr?: number | null;
   payment_collected_at?: string | null;
   payment_collected_by?: User | null;
+  // Admin verification of the collected money. A ticket that owed anything can't
+  // close until payment_verified is true.
+  payment_verified?: boolean;
+  payment_awaiting_verification?: boolean;
+  payment_verified_at?: string | null;
+  payment_verified_by?: User | null;
   // Partial-payment money breakdown. Ticket closes only when pending hits ₹0.
   amount_due_inr?: number;
   amount_collected_inr?: number;

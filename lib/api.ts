@@ -349,10 +349,23 @@ export class Api {
     });
   }
 
-  /** Admin/Manager/assignee: record out-of-warranty payment; closes the ticket. */
+  /**
+   * Admin/Manager/assignee: record out-of-warranty payment. Does NOT close the
+   * ticket — paying in full hands it to an Admin for verification.
+   */
   collectPayment(reference: string, amountInr: number): Promise<TicketDetail> {
     return this.request('POST', `/admin/tickets/${reference}/collect-payment`, {
       json: { amount_collected_inr: amountInr },
+    });
+  }
+
+  /**
+   * Admin/Super Admin only: confirm the collected money actually arrived, which
+   * closes the ticket if the work is otherwise signed off.
+   */
+  verifyPayment(reference: string, note?: string): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/verify-payment`, {
+      json: { note: note?.trim() || null },
     });
   }
 
