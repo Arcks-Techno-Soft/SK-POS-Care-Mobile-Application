@@ -82,10 +82,13 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
   // (created before the feature) — those never show payment UI.
   // `payment_required` is computed by the backend (out-of-warranty, or covered
   // with charges). Out-of-warranty additionally requires a positive amount.
+  // CLOSED is included for post-close corrections: a Super Admin can edit
+  // charges after close, which re-opens the payment (PENDING) — the
+  // difference is collected here and then re-verified by an Admin.
   const paymentPending =
     !!ticket.payment_required &&
     ticket.payment_status === 'PENDING' &&
-    ticket.status === 'RESOLVED';
+    (ticket.status === 'RESOLVED' || ticket.status === 'CLOSED');
   // Collected in full but not yet verified by an Admin — this is what now holds
   // the ticket in RESOLVED. Falls back to deriving it for a pre-deploy backend.
   const paymentAwaitingVerification =
