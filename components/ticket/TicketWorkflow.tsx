@@ -1,6 +1,7 @@
 /** Workflow action card — drives the ticket through its status lifecycle. */
 
 import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { KeyboardAwareSheet } from '@/components/KeyboardAwareSheet';
@@ -59,6 +60,13 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const [holdReason, setHoldReason] = useState('');
   const [holdError, setHoldError] = useState<string | null>(null);
 
+  // Decline sheet — the assigned engineer hands the ticket back with a
+  // mandatory reason. After a successful decline the ticket leaves the
+  // engineer's scope entirely, so we navigate back instead of reloading.
+  const [declineOpen, setDeclineOpen] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [declineError, setDeclineError] = useState<string | null>(null);
+
   const [resolveOpen, setResolveOpen] = useState(false);
   const [summary, setSummary] = useState('');
   const [resolveError, setResolveError] = useState<string | null>(null);
@@ -99,6 +107,47 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const warrantyUnknown = ticket.warranty_status === 'UNKNOWN';
   // Remote support resolves and closes in one step — no signatures or PDF.
   const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
+
+  // Recorded field work (any attempt, open or ended) pins the ticket: no
+  // decline, no rollback. Mirrors the backend guard so the buttons disappear
+  // instead of the tap failing with a 409.
+  const hasAnyAttempt = ticket.attempts.length > 0;
+
+  const submitDecline = async () => {
+    const reason = declineReason.trim();
+    if (reason.length < 3) {
+      setDeclineError('Give a short reason — the managers will see it.');
+      return;
+    }
+    setBusy(true);
+    setDeclineError(null);
+    try {
+      await api.declineTicket(reference, reason);
+      setDeclineOpen(false);
+      refreshPending();
+      // The ticket is no longer assigned to this engineer, so it has left
+      // their visible scope — reloading would 404. Go back to the list.
+      Alert.alert('Ticket declined', 'It has been returned to the managers to re-triage.');
+      router.back();
+    } catch (e) {
+      setDeclineError(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmRollback = (what: 'accept' | 'start') => {
+    Alert.alert(
+      what === 'accept' ? 'Undo accept?' : 'Undo start work?',
+      what === 'accept'
+        ? 'The ticket goes back to Assigned — you can accept it again or decline it.'
+        : 'The ticket goes back to Accepted, as if work had not started.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Undo', style: 'destructive', onPress: () => run(() => api.rollbackTicket(reference)) },
+      ],
+    );
+  };
 
   const submitHold = async () => {
     const reason = holdReason.trim();
@@ -412,12 +461,25 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
         {ticket.status === 'ASSIGNED' && (
           <>
             {assignedToMe ? (
-              <Button
-                title="Accept ticket"
-                icon="hand-left-outline"
-                loading={busy}
-                onPress={() => run(() => api.acceptTicket(reference))}
-              />
+              <>
+                <Button
+                  title="Accept ticket"
+                  icon="hand-left-outline"
+                  loading={busy}
+                  onPress={() => run(() => api.acceptTicket(reference))}
+                />
+                <Button
+                  title="Decline ticket"
+                  icon="close-circle-outline"
+                  variant="secondary"
+                  loading={busy}
+                  onPress={() => {
+                    setDeclineReason('');
+                    setDeclineError(null);
+                    setDeclineOpen(true);
+                  }}
+                />
+              </>
             ) : (
               <Text style={styles.muted}>
                 Assigned to {ticket.assigned_engineer?.name ?? 'an engineer'} — awaiting
@@ -479,9 +541,33 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
 
         {ticket.status === 'ACCEPTED' &&
           (assignedToMe ? (
-            <Text style={styles.muted}>
-              Start your first attempt below to begin work.
-            </Text>
+            <>
+              <Text style={styles.muted}>
+                Start your first attempt below to begin work.
+              </Text>
+              {!hasAnyAttempt && (
+                <>
+                  <Button
+                    title="Undo accept"
+                    icon="arrow-undo-outline"
+                    variant="secondary"
+                    loading={busy}
+                    onPress={() => confirmRollback('accept')}
+                  />
+                  <Button
+                    title="Decline ticket"
+                    icon="close-circle-outline"
+                    variant="secondary"
+                    loading={busy}
+                    onPress={() => {
+                      setDeclineReason('');
+                      setDeclineError(null);
+                      setDeclineOpen(true);
+                    }}
+                  />
+                </>
+              )}
+            </>
           ) : (
             <Text style={styles.muted}>
               Accepted by {ticket.assigned_engineer?.name ?? 'the engineer'} — awaiting
@@ -495,7 +581,18 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               ticket.attempts.some((a) => !a.ended_at) ? (
                 <Text style={styles.muted}>End the open attempt below before resolving.</Text>
               ) : ticket.attempts.filter((a) => a.ended_at).length === 0 ? (
-                <Text style={styles.muted}>Log at least one attempt below before resolving.</Text>
+                <>
+                  <Text style={styles.muted}>Log at least one attempt below before resolving.</Text>
+                  {!hasAnyAttempt && (
+                    <Button
+                      title="Undo start work"
+                      icon="arrow-undo-outline"
+                      variant="secondary"
+                      loading={busy}
+                      onPress={() => confirmRollback('start')}
+                    />
+                  )}
+                </>
               ) : (
                 <Button
                   title={isRemote ? 'Resolve & close' : 'Mark resolved'}
@@ -762,6 +859,54 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
                   fullWidth={false}
                   loading={busy}
                   onPress={submitHold}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAwareSheet>
+      </Modal>
+
+      {/* Decline modal — mandatory reason, mirrors the hold sheet. */}
+      <Modal
+        visible={declineOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setDeclineOpen(false)}
+      >
+        <KeyboardAwareSheet>
+          <Pressable style={styles.backdrop} onPress={() => setDeclineOpen(false)}>
+            <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+              <Text style={styles.sheetTitle}>Decline this ticket</Text>
+              <Text style={styles.sheetHint}>
+                It goes back to the managers to re-triage, and they&apos;ll see
+                your reason. You won&apos;t see this ticket again unless it is
+                re-assigned to you.
+              </Text>
+              <Field
+                value={declineReason}
+                onChangeText={(t) => {
+                  setDeclineReason(t);
+                  if (declineError) setDeclineError(null);
+                }}
+                placeholder="e.g. out of my district this week"
+                multiline
+                error={declineError ?? undefined}
+              />
+              <View style={styles.sheetActions}>
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => setDeclineOpen(false)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Decline"
+                  fullWidth={false}
+                  loading={busy}
+                  onPress={submitDecline}
                   style={{ flex: 1 }}
                 />
               </View>
