@@ -351,6 +351,9 @@ export interface InstallationDetail {
   /** Planned on-site date, "yyyy-mm-dd". Drives the upcoming-installation
    *  WhatsApp reminder to Super Admin / Admin / Managers. Null until set. */
   expected_installation_date?: string | null;
+  /** Every attached invoice document. `invoice_document` is the most recent
+   *  one, kept by the API for older clients — prefer this list. */
+  invoice_documents?: InvoiceDocument[];
   invoice_document: InvoiceDocument | null;
   status: InstallationStatus;
   // On hold — an overlay on `status`, so `status` still reads NEW /
@@ -391,8 +394,11 @@ export interface InstallationAttempt {
   notes: InstallationNote[];
 }
 
-/** The optional uploaded invoice document (PDF or image). */
+/** One uploaded invoice document (PDF or image). Several may be attached. */
 export interface InvoiceDocument {
+  /** null only on a legacy row the backend hasn't backfilled — such a row can't
+   *  be deleted individually, so the UI falls back to "remove all". */
+  id?: number | null;
   filename: string;
   content_type: string;
   size_bytes: number;

@@ -43,6 +43,7 @@ import {
 import { colors, fontSize, radius, spacing, statusTone } from '@/lib/theme';
 import type {
   InstallationDetail,
+  InvoiceDocument,
   InstallationEvent,
   PickedImage,
   User,
@@ -422,7 +423,10 @@ function InvoiceRow({
   );
 }
 
-/* ─── Invoice document (view / upload / replace / remove) ─── */
+/* ─── Invoice documents (view / add / remove) ─── */
+
+/** Mirrors MAX_INVOICE_DOCUMENTS in the backend's installation_workflow. */
+const MAX_INVOICE_DOCS = 10;
 
 function InvoiceDocumentRow({
   installation,
@@ -436,36 +440,51 @@ function InvoiceDocumentRow({
   onReload: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const doc = installation.invoice_document;
+  // Prefer the list; fall back to the singular field so this still renders
+  // against a backend that predates multi-upload.
+  const docs =
+    installation.invoice_documents ??
+    (installation.invoice_document ? [installation.invoice_document] : []);
+  const atCap = docs.length >= MAX_INVOICE_DOCS;
 
   const pickAndUpload = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'image/*'],
         copyToCacheDirectory: true,
-        multiple: false,
+        multiple: true,
       });
       if (result.canceled) return;
-      const asset = result.assets[0];
+      const picked = result.assets.slice(0, MAX_INVOICE_DOCS - docs.length);
+      if (!picked.length) return;
+      if (picked.length < result.assets.length) {
+        Alert.alert(
+          'Invoice documents',
+          `Only ${picked.length} of ${result.assets.length} were uploaded — the limit is ${MAX_INVOICE_DOCS} per installation.`,
+        );
+      }
       setBusy(true);
-      await api.uploadInstallationInvoiceDocument(installation.reference, {
-        uri: asset.uri,
-        name: asset.name ?? 'invoice',
-        type: asset.mimeType ?? 'application/octet-stream',
-      });
+      await api.uploadInstallationInvoiceDocuments(
+        installation.reference,
+        picked.map((a) => ({
+          uri: a.uri,
+          name: a.name ?? 'invoice',
+          type: a.mimeType ?? 'application/octet-stream',
+        })),
+      );
       onReload();
     } catch (e) {
       Alert.alert(
-        'Invoice document',
-        e instanceof ApiError ? e.message : 'Could not upload the document.',
+        'Invoice documents',
+        e instanceof ApiError ? e.message : 'Could not upload the documents.',
       );
     } finally {
       setBusy(false);
     }
   };
 
-  const remove = () => {
-    Alert.alert('Invoice document', 'Remove the uploaded invoice document?', [
+  const remove = (doc: InvoiceDocument) => {
+    Alert.alert('Invoice documents', `Remove "${doc.filename}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -473,11 +492,19 @@ function InvoiceDocumentRow({
         onPress: async () => {
           setBusy(true);
           try {
-            await api.deleteInstallationInvoiceDocument(installation.reference);
+            // A legacy row with no id can only be cleared via the all-docs route.
+            if (doc.id == null) {
+              await api.deleteInstallationInvoiceDocument(installation.reference);
+            } else {
+              await api.deleteInstallationInvoiceDocumentById(
+                installation.reference,
+                doc.id,
+              );
+            }
             onReload();
           } catch (e) {
             Alert.alert(
-              'Invoice document',
+              'Invoice documents',
               e instanceof ApiError ? e.message : 'Could not remove the document.',
             );
           } finally {
@@ -490,29 +517,41 @@ function InvoiceDocumentRow({
 
   return (
     <KeyValue
-      label="Invoice Document"
+      label="Invoice Documents"
       value={
         <View style={styles.docValueWrap}>
-          {doc ? (
-            <Pressable onPress={() => WebBrowser.openBrowserAsync(doc.storage_url)}>
-              <Text style={styles.docLink} numberOfLines={1}>
-                📄 {doc.filename}
-              </Text>
-            </Pressable>
+          {docs.length ? (
+            docs.map((doc, i) => (
+              <View key={doc.id ?? `${doc.storage_url}-${i}`} style={styles.docRow}>
+                <Pressable
+                  style={{ flexShrink: 1 }}
+                  onPress={() => WebBrowser.openBrowserAsync(doc.storage_url)}
+                >
+                  <Text style={styles.docLink} numberOfLines={1}>
+                    📄 {doc.filename}
+                  </Text>
+                </Pressable>
+                {canEdit && !busy && (
+                  <Pressable onPress={() => remove(doc)} hitSlop={8}>
+                    <Text style={styles.docRemove}>Remove</Text>
+                  </Pressable>
+                )}
+              </View>
+            ))
           ) : (
-            <Text style={styles.docNone}>No document</Text>
+            <Text style={styles.docNone}>No documents</Text>
           )}
           {canEdit && (
             <View style={styles.docActionsRow}>
-              <Pressable onPress={pickAndUpload} hitSlop={8} disabled={busy}>
-                <Text style={styles.invoiceEdit}>
-                  {busy ? 'Working…' : doc ? 'Replace' : 'Upload'}
+              <Pressable onPress={pickAndUpload} hitSlop={8} disabled={busy || atCap}>
+                <Text style={[styles.invoiceEdit, atCap && styles.docNone]}>
+                  {busy ? 'Working…' : atCap ? `Limit ${MAX_INVOICE_DOCS} reached` : docs.length ? 'Add more' : 'Upload'}
                 </Text>
               </Pressable>
-              {doc && !busy && (
-                <Pressable onPress={remove} hitSlop={8}>
-                  <Text style={styles.docRemove}>Remove</Text>
-                </Pressable>
+              {!atCap && !busy && (
+                <Text style={styles.docNone}>
+                  {docs.length}/{MAX_INVOICE_DOCS}
+                </Text>
               )}
             </View>
           )}
@@ -1717,6 +1756,8 @@ const styles = StyleSheet.create({
   expectedDate: { fontSize: fontSize.sm, color: colors.ink, textAlign: 'right', flexShrink: 1 },
   expectedRel: { color: colors.info, fontWeight: '600' },
   docValueWrap: { alignItems: 'flex-end', gap: spacing.xs, flexShrink: 1 },
+  // One document per line: name truncates so Remove never gets pushed off.
+  docRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   docLink: { fontSize: fontSize.sm, color: colors.info, textAlign: 'right' },
   docNone: { fontSize: fontSize.sm, color: colors.inkSubtle },
   docActionsRow: { flexDirection: 'row', gap: spacing.md },

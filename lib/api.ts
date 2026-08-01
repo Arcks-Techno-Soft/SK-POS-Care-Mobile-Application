@@ -888,21 +888,39 @@ export class Api {
     });
   }
 
-  uploadInstallationInvoiceDocument(
+  /**
+   * Attach one or more invoice documents. Appends to what's already there —
+   * it does not replace. Repeated `files` parts bind to List[UploadFile].
+   */
+  uploadInstallationInvoiceDocuments(
     reference: string,
-    doc: PickedDocument,
+    docs: PickedDocument[],
   ): Promise<InstallationDetail> {
     const form = new FormData();
-    form.append('file', {
-      uri: doc.uri,
-      name: doc.name,
-      type: doc.type,
-    } as unknown as Blob);
-    return this.request('POST', `/admin/installations/${reference}/invoice-document`, {
+    for (const doc of docs) {
+      form.append('files', {
+        uri: doc.uri,
+        name: doc.name,
+        type: doc.type,
+      } as unknown as Blob);
+    }
+    return this.request('POST', `/admin/installations/${reference}/invoice-documents`, {
       form,
     });
   }
 
+  /** Remove a single invoice document by id. */
+  deleteInstallationInvoiceDocumentById(
+    reference: string,
+    documentId: number,
+  ): Promise<InstallationDetail> {
+    return this.request(
+      'DELETE',
+      `/admin/installations/${reference}/invoice-documents/${documentId}`,
+    );
+  }
+
+  /** Remove ALL invoice documents — the only option for a legacy row with no id. */
   deleteInstallationInvoiceDocument(reference: string): Promise<InstallationDetail> {
     return this.request('DELETE', `/admin/installations/${reference}/invoice-document`);
   }
