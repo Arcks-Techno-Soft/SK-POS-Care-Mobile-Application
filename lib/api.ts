@@ -307,6 +307,20 @@ export class Api {
     });
   }
 
+  /** Assigned engineer: hand the ticket back with a mandatory reason.
+   *  ASSIGNED/ACCEPTED → ACKNOWLEDGED; Admins/Managers get notified. */
+  declineTicket(reference: string, reason: string): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/decline`, {
+      json: { reason },
+    });
+  }
+
+  /** Undo one mistaken tap: ACCEPTED → ASSIGNED or RESOLVING → ACCEPTED.
+   *  Blocked once a work attempt exists. */
+  rollbackTicket(reference: string): Promise<TicketDetail> {
+    return this.request('POST', `/admin/tickets/${reference}/rollback`);
+  }
+
   /** Manager/Admin/Owner: lift a hold; work continues where it stopped. */
   resumeTicket(reference: string, note?: string): Promise<TicketDetail> {
     return this.request('POST', `/admin/tickets/${reference}/resume`, {
@@ -803,6 +817,14 @@ export class Api {
 
   selfAssignInstallation(reference: string): Promise<InstallationDetail> {
     return this.request('POST', `/admin/installations/${reference}/self-assign`);
+  }
+
+  /** Assigned engineer: hand the installation back (ASSIGNED → NEW).
+   *  Mirrors declineTicket. */
+  declineInstallation(reference: string, reason: string): Promise<InstallationDetail> {
+    return this.request('POST', `/admin/installations/${reference}/decline`, {
+      json: { reason },
+    });
   }
 
   /** Manager/Admin/Owner: park an installation. Mirrors holdTicket. */

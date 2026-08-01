@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -855,6 +855,11 @@ function WorkflowSection({
   const [holdReason, setHoldReason] = useState('');
   const [holdBusy, setHoldBusy] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
+  // Decline sheet — assigned engineer hands the installation back (→ NEW).
+  const [declineOpen, setDeclineOpen] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [declineBusy, setDeclineBusy] = useState(false);
+  const [declineError, setDeclineError] = useState<string | null>(null);
 
   // Hold is an overlay on `status`, so it's checked separately everywhere.
   const onHold = !!installation.on_hold;
@@ -999,6 +1004,28 @@ function WorkflowSection({
     }
   };
 
+  const submitDecline = async () => {
+    const reason = declineReason.trim();
+    if (reason.length < 3) {
+      setDeclineError('Give a short reason — the managers will see it.');
+      return;
+    }
+    setDeclineBusy(true);
+    setDeclineError(null);
+    try {
+      await api.declineInstallation(installation.reference, reason);
+      setDeclineOpen(false);
+      // The installation is no longer assigned to this engineer, so it has
+      // left their visible scope — reloading would 404. Go back to the list.
+      Alert.alert('Installation declined', 'It has been returned to the managers to re-triage.');
+      router.back();
+    } catch (e) {
+      setDeclineError(e instanceof ApiError ? e.message : (e as Error).message);
+    } finally {
+      setDeclineBusy(false);
+    }
+  };
+
   const handleResume = () => {
     Alert.alert(
       'Resume installation',
@@ -1125,6 +1152,22 @@ function WorkflowSection({
               </Text>
             ))}
 
+          {/* Hand the job back — assignee only, and only before any recorded
+              field work (mirrors the backend guard). */}
+          {isAssignee && installation.attempts.length === 0 && (
+            <Button
+              title="Decline installation"
+              icon="close-circle-outline"
+              variant="secondary"
+              loading={declineBusy}
+              onPress={() => {
+                setDeclineReason('');
+                setDeclineError(null);
+                setDeclineOpen(true);
+              }}
+            />
+          )}
+
           {/* Not completed yet — a manager/admin can re-assign to another engineer. */}
           {canManage && (
             <View style={styles.reassignBlock}>
@@ -1223,6 +1266,54 @@ function WorkflowSection({
                   fullWidth={false}
                   loading={holdBusy}
                   onPress={submitHold}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Pressable>
+          </Pressable>
+        </KeyboardAwareSheet>
+      </Modal>
+
+      {/* Decline modal — mandatory reason, mirrors the hold sheet. */}
+      <Modal
+        visible={declineOpen}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setDeclineOpen(false)}
+      >
+        <KeyboardAwareSheet>
+          <Pressable style={styles.holdBackdrop} onPress={() => setDeclineOpen(false)}>
+            <Pressable style={styles.holdSheet} onPress={(e) => e.stopPropagation()}>
+              <Text style={styles.holdSheetTitle}>Decline this installation</Text>
+              <Text style={styles.holdSheetHint}>
+                It goes back to the managers to re-assign, and they&apos;ll see
+                your reason. You won&apos;t see it again unless it is
+                re-assigned to you.
+              </Text>
+              <Field
+                value={declineReason}
+                onChangeText={(t) => {
+                  setDeclineReason(t);
+                  if (declineError) setDeclineError(null);
+                }}
+                placeholder="e.g. out of my district this week"
+                multiline
+                error={declineError ?? undefined}
+              />
+              <View style={styles.holdSheetActions}>
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  fullWidth={false}
+                  onPress={() => setDeclineOpen(false)}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Decline"
+                  fullWidth={false}
+                  loading={declineBusy}
+                  onPress={submitDecline}
                   style={{ flex: 1 }}
                 />
               </View>
