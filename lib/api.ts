@@ -28,6 +28,7 @@ import type {
   TicketEvent,
   TicketListItem,
   TokenResponse,
+  WarrantyCheckResult,
   User,
   WorkNote,
 } from './types';
@@ -413,6 +414,20 @@ export class Api {
   updateWarranty(reference: string, warranty_status: string): Promise<TicketDetail> {
     return this.request('PATCH', `/admin/tickets/${reference}/warranty`, {
       json: { warranty_status },
+    });
+  }
+
+  /**
+   * Look the ticket's serial number up in the warranty registry.
+   *
+   * The server applies the verdict itself when unambiguous. If it would
+   * overturn an existing status (or an AMC), it returns requires_confirmation
+   * WITHOUT applying — re-send with confirm=true once the user accepts.
+   * Admin / Super Admin / Manager only.
+   */
+  checkWarranty(reference: string, confirm = false): Promise<WarrantyCheckResult> {
+    return this.request('POST', `/admin/tickets/${reference}/check-warranty`, {
+      json: { confirm },
     });
   }
 

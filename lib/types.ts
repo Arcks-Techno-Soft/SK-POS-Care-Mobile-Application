@@ -394,6 +394,31 @@ export interface InstallationAttempt {
   notes: InstallationNote[];
 }
 
+/** Result of POST /tickets/{ref}/check-warranty.
+ *
+ *  `found: false` means the serial isn't in the registry at all.
+ *  `requires_confirmation` means the verdict was NOT applied — it would
+ *  overturn an existing status (or an AMC), which changes what is billed. */
+export interface WarrantyCheckResult {
+  found: boolean;
+  serial_number: string;
+  verdict?: string | null;
+  current_status?: string | null;
+  applied: boolean;
+  requires_confirmation: boolean;
+  conflict_reason?: 'AMC' | 'DIFFERS' | null;
+  warranty?: {
+    product_name: string;
+    serial_number: string;
+    invoice_number?: string | null;
+    customer_name?: string | null;
+    sale_date?: string | null;
+    warranty_months?: number | null;
+    expiry_date?: string | null;
+  } | null;
+  message: string;
+}
+
 /** One uploaded invoice document (PDF or image). Several may be attached. */
 export interface InvoiceDocument {
   /** null only on a legacy row the backend hasn't backfilled — such a row can't

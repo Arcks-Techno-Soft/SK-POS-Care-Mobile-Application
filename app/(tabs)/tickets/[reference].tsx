@@ -69,6 +69,49 @@ export default function TicketDetailScreen() {
   } = useQuery<TicketDetail>(() => api.getTicket(reference), [reference]);
 
   const canEditMeta = user?.role === 'MANAGER' || isAdminLevel(user?.role);
+
+  // Warranty registry lookup. The server applies the verdict itself when that's
+  // unambiguous; when it would overturn an existing status (or an AMC) it comes
+  // back with requires_confirmation and we ask before re-sending confirm=true.
+  const [checkingWarranty, setCheckingWarranty] = useState(false);
+  const runWarrantyCheck = async (confirm: boolean) => {
+    setCheckingWarranty(true);
+    try {
+      const r = await api.checkWarranty(reference, confirm);
+      if (r.applied) reload();
+
+      if (!r.found) {
+        Alert.alert(
+          'Invalid serial no.',
+          `Serial "${r.serial_number}" isn't in the warranty registry. Check the number on the device, or register the unit under Warranty management.`,
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+      if (r.requires_confirmation) {
+        Alert.alert('Check warranty status', r.message, [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Apply anyway',
+            style: 'destructive',
+            onPress: () => void runWarrantyCheck(true),
+          },
+        ]);
+        return;
+      }
+      const detail = r.warranty?.expiry_date ? `\n\nExpires ${r.warranty.expiry_date}` : '';
+      Alert.alert(
+        r.verdict === 'UNDER_WARRANTY' ? 'Under warranty' : 'Out of warranty',
+        `${r.warranty?.product_name ?? ''}${detail}`.trim() || r.message,
+        [{ text: 'OK' }],
+      );
+    } catch (e) {
+      showError(e);
+    } finally {
+      setCheckingWarranty(false);
+    }
+  };
+  const checkWarranty = () => void runWarrantyCheck(false);
   // Remote-support tickets skip signatures, PDF, spare parts and shipments.
   const isRemote = ticket?.service_type === 'REMOTE_SUPPORT';
   // Third-party support: engineer-signature-only close, no spares/shipments.
@@ -264,6 +307,15 @@ export default function TicketDetailScreen() {
                       }
                     }}
                   />
+                  <Pressable
+                    onPress={checkWarranty}
+                    disabled={checkingWarranty}
+                    style={[styles.checkWarrantyBtn, checkingWarranty && { opacity: 0.5 }]}
+                  >
+                    <Text style={styles.checkWarrantyText}>
+                      {checkingWarranty ? 'Checking…' : 'Check warranty status'}
+                    </Text>
+                  </Pressable>
                 </View>
               ) : ticket.warranty_status === 'UNKNOWN' ? (
                 <Text style={styles.metaEditLabel}>Not set</Text>
@@ -633,6 +685,19 @@ const styles = StyleSheet.create({
     color: colors.inkSubtle,
     width: 72,
   },
+
+  // Deliberately grey/secondary: a lookup, not a workflow action.
+  checkWarrantyBtn: {
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surfaceSunken,
+  },
+  checkWarrantyText: { fontSize: fontSize.xs, color: colors.inkMuted, fontWeight: '600' },
 
   editBox: { gap: spacing.sm, marginTop: spacing.sm },
   editLabel: { fontSize: fontSize.sm, color: colors.inkSubtle, fontWeight: '600' },
