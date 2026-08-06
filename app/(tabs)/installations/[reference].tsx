@@ -1555,7 +1555,7 @@ function SignoffSection({
                 Link sent to a sub-engineer — on-site signing is paused until
                 they submit.
               </Text>
-              {!!fieldLink && (
+              {fieldLink ? (
                 <>
                   <Text selectable style={styles.linkBox}>
                     {fieldLink}
@@ -1567,6 +1567,18 @@ function SignoffSection({
                     onPress={shareFieldLink}
                   />
                 </>
+              ) : (
+                // `fieldLink` only lives in this screen's state, so re-opening
+                // the installation loses it and left no way to resend. The
+                // endpoint is idempotent — it returns the SAME token rather
+                // than minting a new one — so asking again is safe.
+                <Button
+                  title="Show signing link"
+                  variant="secondary"
+                  icon="link-outline"
+                  loading={generatingLink}
+                  onPress={generateFieldLink}
+                />
               )}
             </>
           ) : canAct && hasSubEngineer ? (
