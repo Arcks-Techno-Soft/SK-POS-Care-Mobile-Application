@@ -5,6 +5,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Alert,
   Linking,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
