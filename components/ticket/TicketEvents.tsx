@@ -60,6 +60,9 @@ export default function TicketEvents({ reference }: Props) {
                     {prettyEnum(event.from_status)} → {prettyEnum(event.to_status)}
                   </Text>
                 )}
+                {typeof event.payload?.reason === 'string' && !!event.payload.reason && (
+                  <Text style={styles.note}>{event.payload.reason}</Text>
+                )}
                 {!!event.note && <Text style={styles.note}>{event.note}</Text>}
               </View>
             </View>

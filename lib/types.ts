@@ -464,6 +464,7 @@ export interface InstallationEvent {
   event_type: string;
   from_status: string | null;
   to_status: string | null;
+  payload: Record<string, unknown> | null;
   note: string | null;
   created_at: string;
   actor: User | null;

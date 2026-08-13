@@ -1788,6 +1788,9 @@ function ActivitySection({
                   {prettyEnum(event.from_status)} → {prettyEnum(event.to_status)}
                 </Text>
               )}
+              {typeof event.payload?.reason === 'string' && event.payload.reason ? (
+                <Text style={styles.eventNote}>{event.payload.reason}</Text>
+              ) : null}
               {event.note ? (
                 <Text style={styles.eventNote}>{event.note}</Text>
               ) : null}
