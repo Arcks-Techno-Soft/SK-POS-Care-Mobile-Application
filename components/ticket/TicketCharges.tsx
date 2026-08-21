@@ -366,7 +366,7 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
         visible={feeOpen}
         current={charges?.service_fee_inr ?? 0}
         min={charges?.service_fee_min_inr ?? 0}
-        canWaiveBelowMin={isSuperAdmin(user?.role)}
+        canWaiveBelowMin={isAdminLevel(user?.role)}
         onClose={() => setFeeOpen(false)}
         onSave={async (fee) => {
           try {
