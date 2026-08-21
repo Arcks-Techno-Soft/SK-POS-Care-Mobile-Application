@@ -18,7 +18,6 @@ import {
   canResumeJob,
   engineerLoadLabel,
   isAdminLevel,
-  isSuperAdmin,
 } from '@/lib/options';
 import { usePendingTickets } from '@/lib/pending-tickets';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
@@ -77,7 +76,8 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
   const [feeDraft, setFeeDraft] = useState('');
   // Setting a service charge below the per-service-type minimum is a reserved
   // Super Admin power — plain admins are held to the floor like everyone else.
-  const isAdmin = isSuperAdmin(user?.role);
+  // Admin-level (Admin or Super Admin) may waive the out-of-warranty minimum.
+  const canWaiveBelowMin = isAdminLevel(user?.role);
 
   const openResolve = async () => {
     setSummary('');
@@ -332,12 +332,13 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
       return;
     }
     // Confirm the service charge. Reject a below-minimum amount instead of
-    // silently accepting it — only a Super Admin may go below the floor.
+    // silently accepting it — only an Admin (or Super Admin) may go below the
+    // floor.
     const min = resolveCharges?.service_fee_min_inr ?? 0;
     const fee = Math.round(Number(feeDraft) || 0);
-    if (!isAdmin && min > 0 && fee < min) {
+    if (!canWaiveBelowMin && min > 0 && fee < min) {
       setResolveError(
-        `Service charge can't be below ₹${min.toLocaleString('en-IN')}. Only a Super Admin can set lower.`,
+        `Service charge can't be below ₹${min.toLocaleString('en-IN')}. Only an Admin can set lower.`,
       );
       return;
     }
@@ -958,7 +959,7 @@ export default function TicketWorkflow({ reference, ticket, reload }: Props) {
               hint={
                 (resolveCharges?.service_fee_min_inr ?? 0) > 0
                   ? `Minimum ₹${resolveCharges!.service_fee_min_inr.toLocaleString('en-IN')}${
-                      isAdmin ? ' · you can set lower' : ''
+                      canWaiveBelowMin ? ' · you can set lower' : ''
                     }`
                   : undefined
               }
