@@ -245,7 +245,13 @@ export default function TicketDetailScreen() {
           {/* Product & issue */}
           <Section title="Product & issue">
             <KeyValue label="Product" value={ticket.product_category} />
-            <KeyValue label="Serial no." value={ticket.serial_number} mono />
+            {/* Blank under an "Other" product — that device isn't ours and has
+                no serial. Say so rather than showing an empty row. */}
+            <KeyValue
+              label="Serial no."
+              value={ticket.serial_number || 'Not provided'}
+              mono={!!ticket.serial_number}
+            />
             <KeyValue label="Issue" value={ticket.issue_category} />
             {!!ticket.description && (
               <View style={styles.descBlock}>
@@ -309,13 +315,22 @@ export default function TicketDetailScreen() {
                       }
                     }}
                   />
+                  {/* Nothing to look up without a serial — an "Other" product
+                      has none until someone adds one. */}
                   <Pressable
                     onPress={checkWarranty}
-                    disabled={checkingWarranty}
-                    style={[styles.checkWarrantyBtn, checkingWarranty && { opacity: 0.5 }]}
+                    disabled={checkingWarranty || !ticket.serial_number}
+                    style={[
+                      styles.checkWarrantyBtn,
+                      (checkingWarranty || !ticket.serial_number) && { opacity: 0.5 },
+                    ]}
                   >
                     <Text style={styles.checkWarrantyText}>
-                      {checkingWarranty ? 'Checking…' : 'Check warranty status'}
+                      {checkingWarranty
+                        ? 'Checking…'
+                        : !ticket.serial_number
+                          ? 'No serial to check'
+                          : 'Check warranty status'}
                     </Text>
                   </Pressable>
                 </View>

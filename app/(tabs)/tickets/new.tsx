@@ -103,7 +103,10 @@ export default function NewTicketScreen() {
     if (!productCategory) errs.productCategory = 'Select a product category.';
     else if (productCategory === 'Other' && productCategoryOther.trim().length < 2)
       errs.productCategoryOther = 'Please specify the product category.';
-    if (serialNumber.trim().length < 3) errs.serialNumber = 'Enter the product serial number.';
+    // "Other" is a device that isn't ours — no serial label to read, and the
+    // field is hidden — so only a catalogue product needs one.
+    if (productCategory !== 'Other' && serialNumber.trim().length < 3)
+      errs.serialNumber = 'Enter the product serial number.';
 
     if (!issueCategory) errs.issueCategory = 'Select an issue category.';
     else if (issueCategory === 'Other' && issueCategoryOther.trim().length < 2)
@@ -137,7 +140,7 @@ export default function NewTicketScreen() {
           productCategory === 'Other' && productCategoryOther.trim()
             ? productCategoryOther.trim()
             : productCategory!,
-        serial_number: serialNumber.trim(),
+        serial_number: productCategory === 'Other' ? '' : serialNumber.trim(),
         issue_category:
           issueCategory === 'Other' && issueCategoryOther.trim()
             ? issueCategoryOther.trim()
@@ -360,17 +363,19 @@ export default function NewTicketScreen() {
         />
       )}
 
-      <Field
-        label="Serial number"
-        required
-        value={serialNumber}
-        onChangeText={setSerialNumber}
-        placeholder="e.g. POSBK-2024-A1023"
-        error={errors.serialNumber}
-        autoCapitalize="characters"
-        autoCorrect={false}
-        hint="Used to track the device"
-      />
+      {productCategory !== 'Other' && (
+        <Field
+          label="Serial number"
+          required
+          value={serialNumber}
+          onChangeText={setSerialNumber}
+          placeholder="e.g. POSBK-2024-A1023"
+          error={errors.serialNumber}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          hint="Used to track the device"
+        />
+      )}
 
       <Text style={styles.sectionLabel}>Issue</Text>
 
