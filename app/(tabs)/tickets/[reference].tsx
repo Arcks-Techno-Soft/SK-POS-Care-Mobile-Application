@@ -245,12 +245,11 @@ export default function TicketDetailScreen() {
           {/* Product & issue */}
           <Section title="Product & issue">
             <KeyValue label="Product" value={ticket.product_category} />
-            {/* Blank under an "Other" product — that device isn't ours and has
-                no serial. Say so rather than showing an empty row. */}
-            <KeyValue
-              label="Serial no."
-              value={ticket.serial_number || 'Not provided'}
-              mono={!!ticket.serial_number}
+            <TicketSerialRow
+              ticket={ticket}
+              canEdit={canEditMeta && ticket.status !== 'CLOSED'}
+              api={api}
+              onReload={reload}
             />
             <KeyValue label="Issue" value={ticket.issue_category} />
             {!!ticket.description && (
@@ -641,6 +640,90 @@ function TicketAddressRow({
       {canEdit && (
         <Text style={styles.editLink} onPress={start}>
           Edit address
+        </Text>
+      )}
+    </>
+  );
+}
+
+/* Serial number — read-only with an inline edit form. Deliberately narrower
+   gate than customer/address: Admin/Manager only (matching the backend), until
+   the ticket is CLOSED. */
+function TicketSerialRow({
+  ticket,
+  canEdit,
+  api,
+  onReload,
+}: {
+  ticket: TicketDetail;
+  canEdit: boolean;
+  api: ReturnType<typeof useApi>;
+  onReload: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [serial, setSerial] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const start = () => {
+    setSerial(ticket.serial_number ?? '');
+    setEditing(true);
+  };
+
+  const save = async () => {
+    const trimmed = serial.trim();
+    if (trimmed.length < 3)
+      return Alert.alert('Serial number', 'Enter at least 3 characters.');
+    // The server stores it upper-cased; skip the call when nothing changes.
+    if (trimmed.toUpperCase() === (ticket.serial_number ?? '').toUpperCase()) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.updateTicketSerial(ticket.reference, trimmed);
+      setEditing(false);
+      onReload();
+    } catch (e) {
+      Alert.alert(
+        'Serial number',
+        e instanceof ApiError ? e.message : 'Could not update the serial number.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <View style={styles.editBox}>
+        <Text style={styles.editLabel}>Serial Number</Text>
+        <Field
+          value={serial}
+          onChangeText={setSerial}
+          placeholder="Serial number"
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
+        <View style={styles.editBtnRow}>
+          <Button title="Cancel" variant="secondary" size="sm" fullWidth={false} onPress={() => setEditing(false)} />
+          <Button title="Save" size="sm" fullWidth={false} loading={saving} onPress={save} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      {/* Blank under an "Other" product — that device isn't ours and has
+          no serial. Say so rather than showing an empty row. */}
+      <KeyValue
+        label="Serial no."
+        value={ticket.serial_number || 'Not provided'}
+        mono={!!ticket.serial_number}
+      />
+      {canEdit && (
+        <Text style={styles.editLink} onPress={start}>
+          {ticket.serial_number ? 'Edit serial number' : 'Add serial number'}
         </Text>
       )}
     </>

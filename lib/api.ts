@@ -488,6 +488,13 @@ export class Api {
     return this.request('PATCH', `/admin/tickets/${reference}/address`, { json: body });
   }
 
+  /** Correct the device serial number. Manager and above, until the ticket closes. */
+  updateTicketSerial(reference: string, serial_number: string): Promise<TicketDetail> {
+    return this.request('PATCH', `/admin/tickets/${reference}/serial`, {
+      json: { serial_number },
+    });
+  }
+
   signTicketCustomer(
     reference: string,
     signerName: string,
