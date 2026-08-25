@@ -1,6 +1,7 @@
 /** Core UI primitives — buttons, badges, cards, fields. */
 
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -238,6 +239,10 @@ interface FieldProps extends TextInputProps {
 }
 
 export function Field({ label, hint, error, required, style, ...inputProps }: FieldProps) {
+  // Any masked field gets an eye button so the user can check what they typed.
+  const isSecure = !!inputProps.secureTextEntry;
+  const [revealed, setRevealed] = useState(false);
+
   return (
     <View style={styles.field}>
       {label && (
@@ -246,16 +251,35 @@ export function Field({ label, hint, error, required, style, ...inputProps }: Fi
           {required && <Text style={{ color: colors.danger }}> *</Text>}
         </Text>
       )}
-      <TextInput
-        placeholderTextColor={colors.inkFaint}
-        style={[
-          styles.input,
-          inputProps.multiline && styles.inputMultiline,
-          !!error && { borderColor: colors.danger },
-          style,
-        ]}
-        {...inputProps}
-      />
+      <View>
+        <TextInput
+          placeholderTextColor={colors.inkFaint}
+          style={[
+            styles.input,
+            inputProps.multiline && styles.inputMultiline,
+            isSecure && styles.inputSecure,
+            !!error && { borderColor: colors.danger },
+            style,
+          ]}
+          {...inputProps}
+          secureTextEntry={isSecure && !revealed}
+        />
+        {isSecure && (
+          <Pressable
+            onPress={() => setRevealed((v) => !v)}
+            hitSlop={10}
+            style={styles.revealBtn}
+            accessibilityRole="button"
+            accessibilityLabel={revealed ? 'Hide password' : 'Show password'}
+          >
+            <Ionicons
+              name={revealed ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={colors.inkSubtle}
+            />
+          </Pressable>
+        )}
+      </View>
       {!!error && <Text style={styles.fieldError}>{error}</Text>}
       {!error && !!hint && <Text style={styles.fieldHint}>{hint}</Text>}
     </View>
@@ -364,6 +388,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   inputMultiline: { minHeight: 96, textAlignVertical: 'top', paddingTop: 12 },
+  // Leave room for the eye button so long passwords don't run under it.
+  inputSecure: { paddingRight: 46 },
+  revealBtn: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   fieldError: { fontSize: fontSize.xs, color: colors.danger },
   fieldHint: { fontSize: fontSize.xs, color: colors.inkSubtle },
 
