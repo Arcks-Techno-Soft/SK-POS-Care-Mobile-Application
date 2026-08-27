@@ -21,7 +21,7 @@ import { ApiError } from '@/lib/api';
 import { useApi, useAuth } from '@/lib/auth';
 import { formatINR } from '@/lib/format';
 import { useQuery } from '@/lib/hooks';
-import { isAdminLevel, isSuperAdmin, ticketIsOperable, ticketLockReason } from '@/lib/options';
+import { isAdminLevel, ticketIsOperable, ticketLockReason } from '@/lib/options';
 import { colors, fontSize, radius, spacing } from '@/lib/theme';
 import type {
   ChargeLineItem,
@@ -67,10 +67,11 @@ export default function TicketCharges({ reference, ticket, reload }: Props) {
 
   const charges = chargesQuery.data;
   const operable = ticketIsOperable(ticket.status, ticket.on_hold);
-  // A Super Admin may correct the invoice (service fee + spares) at ANY status,
-  // including after the ticket is CLOSED — a post-close billing correction the
-  // backend now allows. Everyone else is held to the normal operable window.
-  const canEditCharges = operable || isSuperAdmin(user?.role);
+  // An Admin-level user (Admin or Super Admin) may correct the invoice (service
+  // fee + spares) at ANY status, including after the ticket is CLOSED — a
+  // post-close billing correction the backend allows. Manager/engineer are held
+  // to the normal operable window. Mirrors the backend's _can_manage_charges.
+  const canEditCharges = operable || isAdminLevel(user?.role);
   // Remote-support tickets carry no spare parts — show only the service fee.
   const isRemote = ticket.service_type === 'REMOTE_SUPPORT';
   const isThirdParty = ticket.service_type === 'THIRD_PARTY_SUPPORT';
@@ -587,7 +588,7 @@ function ServiceFeeModal({
             hint={
               min > 0
                 ? `Minimum ₹${min.toLocaleString('en-IN')}${
-                    canWaiveBelowMin ? ' · Super Admin can set lower' : ''
+                    canWaiveBelowMin ? ' · you can set lower' : ''
                   }`
                 : undefined
             }
