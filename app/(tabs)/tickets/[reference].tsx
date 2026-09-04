@@ -56,9 +56,10 @@ export default function TicketDetailScreen() {
   const router = useRouter();
   const api = useApi();
   const { user } = useAuth();
-  // The override controls below (force-close + delete) are reserved Super Admin
-  // powers, so gate them to super-admin only — not plain admins.
-  const isAdmin = isSuperAdmin(user?.role);
+  // Force-close is Admin-level since 2026-09-04 so an Admin can clear the
+  // RESOLVED backlog unaided. Soft-delete stays a reserved Super Admin power.
+  const canForceClose = isAdminLevel(user?.role);
+  const canDelete = isSuperAdmin(user?.role);
 
   const {
     data: ticket,
@@ -415,13 +416,14 @@ export default function TicketDetailScreen() {
             )}
           <TicketEvents reference={reference} ticket={ticket} reload={reload} />
 
-          {isAdmin && (
-            <Section title="Super Admin controls">
+          {canForceClose && (
+            <Section title={canDelete ? 'Super Admin controls' : 'Admin controls'}>
               <AdminTicketActions
                 reference={reference}
                 status={ticket.status}
                 onChanged={reload}
                 onDeleted={() => router.back()}
+                canDelete={canDelete}
               />
             </Section>
           )}

@@ -21,7 +21,13 @@ import { Select, toOptions } from '@/components/ui/Select';
 import { useApi, useAuth } from '@/lib/auth';
 import { useDebounced } from '@/lib/hooks';
 import { timeAgo } from '@/lib/format';
-import { isSuperAdmin, prettyEnum, SEVERITIES, TICKET_STATUSES } from '@/lib/options';
+import {
+  isAdminLevel,
+  isSuperAdmin,
+  prettyEnum,
+  SEVERITIES,
+  TICKET_STATUSES,
+} from '@/lib/options';
 import { colors, fontSize, severityTone, spacing, statusTone, warrantyTone } from '@/lib/theme';
 import type { TicketListItem } from '@/lib/types';
 
@@ -38,9 +44,11 @@ export default function TicketsListScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isEngineer = user?.role === 'ENGINEER';
-  // Quick close (force-close) and quick delete are reserved Super Admin powers.
-  const isAdmin = isSuperAdmin(user?.role);
-  // Quick close/delete (Super Admin) — actionRef is the row being acted on.
+  // Quick close is Admin-level since 2026-09-04; quick delete stays a reserved
+  // Super Admin power.
+  const canForceClose = isAdminLevel(user?.role);
+  const canDelete = isSuperAdmin(user?.role);
+  // Quick close/delete — actionRef is the row being acted on.
   const [actionRef, setActionRef] = useState<string | null>(null);
   const [actionMode, setActionMode] = useState<AdminActionMode>(null);
 
@@ -175,16 +183,18 @@ export default function TicketsListScreen() {
               })
             }
             admin={
-              isAdmin
+              canForceClose
                 ? {
                     onClose: () => {
                       setActionRef(item.reference);
                       setActionMode('close');
                     },
-                    onDelete: () => {
-                      setActionRef(item.reference);
-                      setActionMode('delete');
-                    },
+                    onDelete: canDelete
+                      ? () => {
+                          setActionRef(item.reference);
+                          setActionMode('delete');
+                        }
+                      : undefined,
                   }
                 : undefined
             }
@@ -231,7 +241,7 @@ export default function TicketsListScreen() {
         }
       />
 
-      {isAdmin && actionRef && (
+      {canForceClose && actionRef && (
         <AdminTicketActionModals
           reference={actionRef}
           mode={actionMode}
@@ -257,7 +267,8 @@ function TicketCard({
 }: {
   ticket: TicketListItem;
   onPress: () => void;
-  admin?: { onClose: () => void; onDelete: () => void };
+  // onDelete is absent for a plain Admin: force-close without soft-delete.
+  admin?: { onClose: () => void; onDelete?: () => void };
 }) {
   return (
     <Card onPress={onPress} style={styles.card}>
@@ -331,9 +342,11 @@ function TicketCard({
               <Text style={styles.adminAction}>Close</Text>
             </Pressable>
           )}
-          <Pressable hitSlop={6} onPress={admin.onDelete}>
-            <Text style={styles.adminAction}>Delete</Text>
-          </Pressable>
+          {admin.onDelete && (
+            <Pressable hitSlop={6} onPress={admin.onDelete}>
+              <Text style={styles.adminAction}>Delete</Text>
+            </Pressable>
+          )}
         </View>
       )}
     </Card>

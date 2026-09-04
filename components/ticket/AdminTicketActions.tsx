@@ -1,5 +1,7 @@
-/** Admin/Owner-only override buttons on the ticket detail screen: force-close
- * (with summary + pending review) and soft-delete. Both buttons are red. */
+/** Admin-level override buttons on the ticket detail screen: force-close (with
+ * summary + pending review) and, for a Super Admin only, soft-delete. Both
+ * buttons are red. Force-close became Admin-level on 2026-09-04; delete stays
+ * reserved, so the caller passes canDelete. */
 
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -18,9 +20,17 @@ interface Props {
   onChanged: () => void;
   /** Navigate away after a delete (the ticket is now hidden). */
   onDeleted: () => void;
+  /** Super Admin only — plain Admins get force-close without delete. */
+  canDelete: boolean;
 }
 
-export default function AdminTicketActions({ reference, status, onChanged, onDeleted }: Props) {
+export default function AdminTicketActions({
+  reference,
+  status,
+  onChanged,
+  onDeleted,
+  canDelete,
+}: Props) {
   const [mode, setMode] = useState<AdminActionMode>(null);
 
   return (
@@ -34,13 +44,15 @@ export default function AdminTicketActions({ reference, status, onChanged, onDel
           style={styles.flex}
         />
       )}
-      <Button
-        title="Delete ticket"
-        variant="danger"
-        icon="trash-outline"
-        onPress={() => setMode('delete')}
-        style={styles.flex}
-      />
+      {canDelete && (
+        <Button
+          title="Delete ticket"
+          variant="danger"
+          icon="trash-outline"
+          onPress={() => setMode('delete')}
+          style={styles.flex}
+        />
+      )}
 
       <AdminTicketActionModals
         reference={reference}
