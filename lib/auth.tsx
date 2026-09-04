@@ -36,10 +36,10 @@ import {
 import * as storage from './storage';
 import type { Role, User } from './types';
 
-// Production backend on Render. End users don't configure this — it's the
+// Production backend on AWS Lightsail. End users don't configure this — it's the
 // app's permanent home. The override path in the More tab is kept so
 // staging/local backends can still be aimed at when debugging.
-const DEFAULT_SERVER_URL = 'https://arckscare-api.onrender.com';
+const DEFAULT_SERVER_URL = 'https://api.sk-pos-care.sktechnosys.in';
 /** Re-lock if the app was backgrounded longer than this. */
 const LOCK_AFTER_MS = 90_000;
 
@@ -111,8 +111,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       getBaseUrl: () => serverUrlRef.current,
       getToken: () => tokenRef.current,
       onUnauthorized: () => {
-        // The token was rejected mid-session; fall back to the lock screen.
+        // The token was rejected mid-session; drop it so the next unlock
+        // re-logins with saved credentials instead of looping on a dead token,
+        // then fall back to the lock screen.
         if (statusRef.current === 'authenticated') {
+          void storage.clearSession();
+          tokenRef.current = null;
           if (hasPasscodeRef.current) lock();
           else setStatus('needsLogin');
         }
@@ -147,8 +151,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }> => {
     const cached = await storage.getSession();
     if (cached && new Date(cached.expiresAt).getTime() > Date.now() + 60_000) {
-      applySession(cached);
-      return { ok: true };
+      // Verify the server still accepts the cached token: after a backend
+      // signing-key rotation (e.g. the AWS migration) an unexpired token is
+      // rejected with 401, which would otherwise bounce every unlock back to
+      // the lock screen forever. On network failure trust the cache (offline).
+      try {
+        tokenRef.current = cached.token;
+        await apiRef.current.me();
+        applySession(cached);
+        return { ok: true };
+      } catch (e) {
+        const err = e as ApiError;
+        if (err.status !== 401 && err.status !== 403) {
+          applySession(cached);
+          return { ok: true };
+        }
+        tokenRef.current = null;
+        await storage.clearSession();
+        // Token is dead — fall through to a saved-credentials login.
+      }
     }
     const creds = await storage.getCredentials();
     if (!creds) return { ok: false, fatal: true, error: 'No saved account.' };
@@ -196,7 +217,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const savedUrl = (await storage.getServerUrl()) ?? DEFAULT_SERVER_URL;
+      let savedUrl = (await storage.getServerUrl()) ?? DEFAULT_SERVER_URL;
+      if (savedUrl === 'https://arckscare-api.onrender.com') {
+        // One-time migration off the old Render backend.
+        savedUrl = DEFAULT_SERVER_URL;
+        await storage.setServerUrl(savedUrl);
+      }
       serverUrlRef.current = savedUrl;
       setServerUrlState(savedUrl);
 
