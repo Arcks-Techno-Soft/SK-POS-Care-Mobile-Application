@@ -22,7 +22,7 @@ import { useApi, useAuth } from '@/lib/auth';
 import { useDebounced } from '@/lib/hooks';
 import { timeAgo } from '@/lib/format';
 import {
-  isAdminLevel,
+  isAdminOrManager,
   isSuperAdmin,
   prettyEnum,
   SEVERITIES,
@@ -46,7 +46,8 @@ export default function TicketsListScreen() {
   const isEngineer = user?.role === 'ENGINEER';
   // Quick close is Admin-level since 2026-09-04; quick delete stays a reserved
   // Super Admin power.
-  const canForceClose = isAdminLevel(user?.role);
+  // Closing is Manager-level since 2026-09-21; deleting stays super-admin.
+  const canForceClose = isAdminOrManager(user?.role);
   const canDelete = isSuperAdmin(user?.role);
   // Quick close/delete — actionRef is the row being acted on.
   const [actionRef, setActionRef] = useState<string | null>(null);
