@@ -34,6 +34,7 @@ import { useQuery } from '@/lib/hooks';
 import {
   INDIAN_STATES,
   isAdminLevel,
+  isAdminOrManager,
   isSuperAdmin,
   prettyEnum,
   SERVICE_TYPES,
@@ -58,7 +59,8 @@ export default function TicketDetailScreen() {
   const { user } = useAuth();
   // Force-close is Admin-level since 2026-09-04 so an Admin can clear the
   // RESOLVED backlog unaided. Soft-delete stays a reserved Super Admin power.
-  const canForceClose = isAdminLevel(user?.role);
+  // Closing is Manager-level since 2026-09-21; deleting stays super-admin.
+  const canForceClose = isAdminOrManager(user?.role);
   const canDelete = isSuperAdmin(user?.role);
 
   const {
