@@ -21,7 +21,7 @@ import { useApi } from '@/lib/auth';
 import {
   BUSINESS_TYPES,
   INDIAN_STATES,
-  ISSUE_CATEGORIES,
+  issueCategoriesFor,
   PREFERRED_CONTACT_TIMES,
   PRODUCT_CATEGORIES,
 } from '@/lib/options';
@@ -82,6 +82,18 @@ export default function NewTicketScreen() {
   const [banner, setBanner] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
 
+  // The issue list depends on the product (Printer, POS Machine, … each have
+  // their own). Changing the product clears an issue it doesn't offer, so a
+  // stale pick can't be submitted.
+  const issueOptions = issueCategoriesFor(productCategory);
+  const handleProductChange = (next: string) => {
+    setProductCategory(next);
+    if (issueCategory && !issueCategoriesFor(next).includes(issueCategory)) {
+      setIssueCategory(null);
+      setIssueCategoryOther('');
+    }
+  };
+
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
     if (businessName.trim().length < 2) errs.businessName = 'Business name is required.';
@@ -108,7 +120,8 @@ export default function NewTicketScreen() {
     if (productCategory !== 'Other' && serialNumber.trim().length < 3)
       errs.serialNumber = 'Enter the product serial number.';
 
-    if (!issueCategory) errs.issueCategory = 'Select an issue category.';
+    if (!issueCategory || !issueOptions.includes(issueCategory))
+      errs.issueCategory = 'Select an issue category.';
     else if (issueCategory === 'Other' && issueCategoryOther.trim().length < 2)
       errs.issueCategoryOther = 'Please specify the issue category.';
     if (description.trim().length < 20)
@@ -342,7 +355,7 @@ export default function NewTicketScreen() {
         label="Product category"
         required
         value={productCategory}
-        onChange={setProductCategory}
+        onChange={handleProductChange}
         placeholder="Select product"
         sheetTitle="Product Category"
         options={PRODUCT_CATEGORIES.map((p) => ({ label: p, value: p }))}
@@ -386,7 +399,7 @@ export default function NewTicketScreen() {
         onChange={setIssueCategory}
         placeholder="Choose issue category"
         sheetTitle="Issue Category"
-        options={ISSUE_CATEGORIES.map((i) => ({ label: i, value: i }))}
+        options={issueOptions.map((i) => ({ label: i, value: i }))}
       />
       {!!errors.issueCategory && <Text style={styles.fieldError}>{errors.issueCategory}</Text>}
 
