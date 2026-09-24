@@ -87,9 +87,11 @@ export const PRODUCT_CATEGORIES = [
   'Tablet',
   'Monitor',
   'CCTV',
+  'Cash Drawer',
   'Other',
 ];
 
+/** Generic issue list, for products without a list of their own below. */
 export const ISSUE_CATEGORIES = [
   'Not Powering On',
   'Display Issue',
@@ -99,6 +101,55 @@ export const ISSUE_CATEGORIES = [
   'Physical Damage',
   'Other',
 ];
+
+/** Product-specific issue lists (from the ops team's issue sheet) — keep in
+ *  sync with the web app's ISSUE_CATEGORIES_BY_PRODUCT. Products not listed
+ *  get the generic ISSUE_CATEGORIES. Every list ends in "Other" (free text). */
+export const ISSUE_CATEGORIES_BY_PRODUCT: Record<string, string[]> = {
+  Printer: [
+    'Printer Head Issue',
+    'Printer Cutter Issue',
+    'Printer Motherboard Issue',
+    'Printer Blid Issue',
+    'USB Port Not Working',
+    'Printer IP Address Not Pinging',
+    'Adaptor Not Working',
+    'Other',
+  ],
+  'POS Machine': [
+    'Not Powering On',
+    'Windows Not Booting',
+    'SSD Not Showing',
+    'Overheating',
+    'Display Issue',
+    'Touch Not Working',
+    'System On But No Display',
+    'Adaptor Not Working',
+    'Power Button Issue',
+    'Other',
+  ],
+  'Cash Drawer': [
+    'Key Set Issue',
+    'Tray Broken',
+    'Cable Issue',
+    'Cash Drawer Motor Issue',
+    'Other',
+  ],
+  Kiosk: [
+    'Display Issue',
+    'Touch Issue',
+    'HDMI Cable Issue',
+    'Touch Cable Issue',
+    'Display Adaptor Issue',
+    'Extension Box Issue',
+    'Other',
+  ],
+};
+
+/** The issue categories to offer for a product category. */
+export function issueCategoriesFor(product?: string | null): string[] {
+  return (product && ISSUE_CATEGORIES_BY_PRODUCT[product]) || ISSUE_CATEGORIES;
+}
 
 export const PREFERRED_CONTACT_TIMES = [
   'Morning (9 AM - 12 PM)',
