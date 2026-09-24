@@ -392,7 +392,7 @@ export default function UsersScreen() {
     [],
   );
 
-  if (!isSuperAdmin(currentUser?.role)) {
+  if (!currentUser || !isSuperAdmin(currentUser.role)) {
     return (
       <Screen>
         <Stack.Screen options={{ title: 'Staff accounts' }} />
