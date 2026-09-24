@@ -184,7 +184,7 @@ export default function NewInstallationScreen() {
       // from the installation screen (re-submitting would create a duplicate).
       if (invoiceDoc) {
         try {
-          await api.uploadInstallationInvoiceDocument(created.reference, invoiceDoc);
+          await api.uploadInstallationInvoiceDocuments(created.reference, [invoiceDoc]);
         } catch (e) {
           const msg = e instanceof ApiError ? e.message : 'upload failed';
           Alert.alert(
