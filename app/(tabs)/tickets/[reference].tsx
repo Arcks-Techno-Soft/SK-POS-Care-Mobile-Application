@@ -189,6 +189,20 @@ export default function TicketDetailScreen() {
               <Text style={styles.ref}>{ticket.reference}</Text>
               <Text style={styles.time}>Created {timeAgo(ticket.created_at)}</Text>
             </View>
+            {/* Another device at the same customer: copies customer, address,
+                product and issue into a new ticket — serial is typed fresh. */}
+            <Button
+              title="Clone ticket"
+              variant="secondary"
+              icon="copy-outline"
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/tickets/new',
+                  params: { clone: ticket.reference },
+                })
+              }
+              style={{ marginTop: spacing.md }}
+            />
           </Card>
 
           {/* Workflow */}

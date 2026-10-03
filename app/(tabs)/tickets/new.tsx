@@ -7,8 +7,8 @@
  * engineer-raised tickets land in the admin inbox tagged "Opened by <name>".
  */
 
-import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { BusinessNameField } from '@/components/BusinessNameField';
@@ -40,9 +40,30 @@ function normaliseIndianMobile(raw: string): string | null {
   return /^[6-9]\d{9}$/.test(d) ? d : null;
 }
 
+/** A stored value outside the preset list came in via "Other" + typed text. */
+function presetOrOther(
+  value: string | null | undefined,
+  presets: readonly string[],
+): { pick: string | null; other: string } {
+  const v = (value ?? '').trim();
+  if (!v) return { pick: null, other: '' };
+  return presets.includes(v) ? { pick: v, other: '' } : { pick: 'Other', other: v };
+}
+
 export default function NewTicketScreen() {
   const api = useApi();
   const router = useRouter();
+  // `clone=<reference>` pre-fills the form from that ticket for another device
+  // at the same customer. The serial number is left blank and must be typed.
+  const { clone } = useLocalSearchParams<{ clone?: string }>();
+  const cloneRef = typeof clone === 'string' && clone ? clone : null;
+  const [cloneLoading, setCloneLoading] = useState(!!cloneRef);
+  // Fields this form doesn't show but a clone should keep from the original.
+  const [cloneExtras, setCloneExtras] = useState<{
+    contact_person_profile?: string;
+    latitude?: number;
+    longitude?: number;
+  }>({});
 
   // Business
   const [businessName, setBusinessName] = useState('');
@@ -93,6 +114,55 @@ export default function NewTicketScreen() {
       setIssueCategoryOther('');
     }
   };
+
+  useEffect(() => {
+    if (!cloneRef) return;
+    let cancelled = false;
+    api
+      .getTicket(cloneRef)
+      .then((t) => {
+        if (cancelled) return;
+        setBusinessName(t.business_name);
+        setContactName(t.contact_name);
+        const type = presetOrOther(t.business_type, BUSINESS_TYPES);
+        setBusinessType(type.pick);
+        setBusinessTypeOther(type.other);
+        setPhone(t.phone);
+        setEmail(t.email ?? '');
+        setAddressLine1(t.address_line1);
+        setAddressLine2(t.address_line2 ?? '');
+        setAddressLine3(t.address_line3 ?? '');
+        setCity(t.city);
+        setStateName(t.state);
+        setPincode(t.pincode);
+        const product = presetOrOther(t.product_category, PRODUCT_CATEGORIES);
+        setProductCategory(product.pick);
+        setProductCategoryOther(product.other);
+        setSerialNumber('');
+        const issue = presetOrOther(t.issue_category, issueCategoriesFor(product.pick));
+        setIssueCategory(issue.pick);
+        setIssueCategoryOther(issue.other);
+        setDescription(t.description ?? '');
+        setCloneExtras({
+          contact_person_profile: t.contact_person_profile ?? undefined,
+          latitude: t.latitude ?? undefined,
+          longitude: t.longitude ?? undefined,
+        });
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setBanner(
+            `Couldn't load ${cloneRef} to clone: ${e instanceof ApiError ? e.message : (e as Error).message}`,
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCloneLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, cloneRef]);
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -164,6 +234,12 @@ export default function NewTicketScreen() {
       if (addressLine2.trim()) body.address_line2 = addressLine2.trim();
       if (addressLine3.trim()) body.address_line3 = addressLine3.trim();
       if (preferredContactTime) body.preferred_contact_time = preferredContactTime;
+      if (cloneExtras.contact_person_profile)
+        body.contact_person_profile = cloneExtras.contact_person_profile;
+      if (cloneExtras.latitude != null && cloneExtras.longitude != null) {
+        body.latitude = cloneExtras.latitude;
+        body.longitude = cloneExtras.longitude;
+      }
 
       const created = await api.createTicket(body, images);
       router.replace({
@@ -188,9 +264,20 @@ export default function NewTicketScreen() {
 
   return (
     <Screen scroll padded>
-      <Stack.Screen options={{ title: 'New ticket' }} />
+      <Stack.Screen options={{ title: cloneRef ? 'Clone ticket' : 'New ticket' }} />
 
       {banner && <Banner message={banner} tone="danger" />}
+
+      {cloneRef && (
+        <Banner
+          message={
+            cloneLoading
+              ? `Loading ${cloneRef}…`
+              : `Customer, address, product and issue copied from ${cloneRef}. Enter the serial number of this device, check the details, then create the ticket.`
+          }
+          tone="info"
+        />
+      )}
 
       {duplicate && (
         <View style={styles.duplicate}>
@@ -447,6 +534,7 @@ export default function NewTicketScreen() {
         title="Create ticket"
         onPress={handleSubmit}
         loading={submitting}
+        disabled={cloneLoading}
         icon="add-circle-outline"
         style={{ marginTop: spacing.lg }}
       />

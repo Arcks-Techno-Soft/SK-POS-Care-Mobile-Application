@@ -233,6 +233,7 @@ export class Api {
       issue_category: string;
       description: string;
       preferred_contact_time?: string;
+      contact_person_profile?: string;
     },
     images: PickedImage[],
   ): Promise<TicketDetail> {
