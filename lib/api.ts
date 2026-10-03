@@ -135,8 +135,8 @@ export class Api {
       throw new ApiError(
         0,
         aborted
-          ? `The server at ${base} did not respond. Check the server URL on the login screen and that the backend is reachable from this device.`
-          : `Could not reach the server at ${base}. Check the server URL and that the backend is running.`,
+          ? 'The server is taking too long to respond. It may be busy or your connection may be slow — please try again in a moment.'
+          : 'Could not connect to the server. Check your internet connection and try again.',
       );
     } finally {
       clearTimeout(timer);
